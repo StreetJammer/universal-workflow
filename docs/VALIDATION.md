@@ -1,6 +1,6 @@
 # Validation record — 0.1.0 preview
 
-The foundation was merged through [PR #1](https://github.com/StreetJammer/universal-workflow/pull/1). It is not a claim of universal compatibility or production certification.
+The foundation was merged through [PR #1](https://github.com/StreetJammer/universal-workflow/pull/1); all five feature follow-ups, PRs #4–#8, are also merged. The final feature revision `7b68ba8` completed code/security review and all six hosted CI jobs before [PR #8](https://github.com/StreetJammer/universal-workflow/pull/8) merged as `b085dc3`. The tested and merged feature trees are identical. See the [progress record](GAP_ANALYSIS.md#progress--6-november-2026). This evidence is not a claim of universal compatibility or production certification.
 
 ## Reproduce local checks
 
@@ -42,11 +42,11 @@ Independent agent task trials used the workflow on disposable artifacts:
 
 Separate offline runtime and packaging audits reproduced issues, then checked repairs. Their reusable regression cases are included in the suite. Raw fixture output and private source material are excluded from distribution.
 
-## Checks still requiring another environment
+## Hosted checks and remaining environment checks
 
 | Check | Status |
 | --- | --- |
-| GitHub Actions on Linux/macOS/Windows, Python 3.10/3.12 | All six jobs passed on merged PR #1; feature revisions require their own latest checks |
+| GitHub Actions on Linux/macOS/Windows, Python 3.10/3.12 | All six jobs passed for the final merged feature tree in [run 42181591909](https://github.com/StreetJammer/universal-workflow/actions/runs/42181591909); future revisions require their own checks |
 | Native Claude plugin discovery, commands, and hook events | Format inspected against official documentation; native CLI unavailable here |
 | Native Codex discovery and authenticated `exec` | Documented interface implemented; native CLI unavailable here |
 | Model-backed review quality and real evaluator improvements | Requires authenticated host and task-specific held-out cases |
@@ -54,7 +54,7 @@ Separate offline runtime and packaging audits reproduced issues, then checked re
 | Windows privileged symlink creation | Symlink regressions are POSIX-only; no false pass reported |
 | Game engine, browser, render, or deployment integrations | Delegated to destination tools; not exercised by these runtime tests |
 | Unattended execution | Scheduler recipe supplied; no schedule activated by the package |
-| `@codex review` on the public PR | Code review found backup permissions; security review found forged installation destinations. Both reproduced and repaired with regressions; code/security reviews completed before PR #1 merged. Follow each feature PR for its latest review state. |
+| Public Codex code/security review | PR #1 and PRs #4–#8 completed review before merging. The final PR #8 code review found no major issues and its security review found no security issues after the storage-quota repair. Open dependency PR review status is recorded in the [progress record](GAP_ANALYSIS.md). |
 
 ## Release decision
 
