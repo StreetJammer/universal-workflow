@@ -27,6 +27,7 @@ Universal Workflow coordinates an agent's work from a short request to a verifie
 - **Domain-aware verification:** use browser checks for websites, engine/play checks for games, and source/render checks for research and documents.
 - **Native memory first:** use the host's everyday memory; add shared project memory only when needed.
 - **Optional portable memory:** project isolation, provenance, expiry, atomic updates, revision history, rollback, and Markdown/JSON export.
+- **Memory maintenance:** review without new events, sweep older memories, and propose versioned merges or retirements.
 - **Cross-session review:** a separate “dreaming” worker proposes improvements from recorded outcomes.
 - **Selected session evidence:** import sanitized messages, tool summaries, skills used, and corrections with bounded, atomic `trace-import` batches.
 - **Evaluation before adoption:** workflow changes need a passing, independently executed evaluator before promotion.
@@ -228,6 +229,7 @@ CI runs on Linux, macOS, and Windows. Check the pull request's latest six matrix
 | Native memory coexistence | [Native memory](skills/universal-workflow/references/native-memory.md) |
 | Transactional project memory | [Memory runtime](skills/universal-workflow/references/memory.md) |
 | Review and evaluation | [Review workflow](skills/universal-workflow/references/review.md) |
+| Memory maintenance | [Memory-only sweeps](docs/MEMORY_MAINTENANCE.md) |
 | Selected session imports | [Session traces](docs/SESSION_TRACES.md) |
 | Host integration | [Adapters](skills/universal-workflow/references/adapters.md) |
 | Source concepts | [Source map](skills/universal-workflow/references/source-map.md) |

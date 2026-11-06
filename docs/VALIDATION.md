@@ -11,7 +11,7 @@ python3 scripts/validate_package.py
 python3 -m unittest discover -s skills/universal-workflow/scripts -p 'test_*.py' -v
 ```
 
-The suite contains **70 deterministic tests**: the 60-test foundation plus ten session-trace regressions. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips seven POSIX-specific cases explicitly.
+The suite contains **91 deterministic tests**: the 60-test foundation plus ten session-trace and twenty-one maintenance regressions. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips seven POSIX-specific cases explicitly.
 
 | Area | Evidence and scope |
 | --- | --- |
@@ -23,6 +23,7 @@ The suite contains **70 deterministic tests**: the 60-test foundation plus ten s
 | Bounded data | 50 large Unicode events are processed across bounded packets without skipped or duplicated sequences |
 | Hooks | Context output shape, no raw response capture, turn-ID deduplication, old-host fallback, nested repository/worktree and explicit non-Git project isolation, malformed location rejection, bounded lock contention |
 | Installation | Both-host conflict preflight, forged module rejection, full entry-set/type validation, internal symlink/junction rejection, FIFO rejection without opening it, custom content preservation, CRLF/mode preservation, AGENTS import, repeat idempotence, plugin/generic license inclusion |
+| Memory maintenance | No-event sweeps, cross-batch candidates, resumable cursors, multi-source atomic merges, retirement/restore, stale hashes and workflow evaluation gates |
 | Selected session traces | Rich review-context retention, redaction before DB/WAL persistence, bounded input, project isolation, stable identities, late-conflict batch rollback, subprocess import |
 | Packaging | Required files, valid JSON, Python 3.10 syntax, local Markdown links, plugin hooks, absence of raw transcript and project database |
 

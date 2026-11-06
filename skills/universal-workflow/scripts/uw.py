@@ -180,6 +180,7 @@ class Store:
         require(scope in ('project', 'scratch'), 'Shared/owner policy is read-only; propose it outside this store')
         slug(key)
         require(payload.get('kind') in KINDS, 'Invalid memory kind')
+        require(type(payload.get('retired', False)) is bool, 'Invalid retirement status')
         text_field(payload.get('body'), 'body')
         require(isinstance(payload.get('evidence'), list) and 0 < len(payload['evidence']) <= 20, 'Evidence is required')
         for e in payload['evidence']:
@@ -217,6 +218,8 @@ class Store:
         results = []
         for row in self.db.execute('SELECT * FROM memories WHERE scope=? ORDER BY updated DESC, key', (scope,)):
             item = {**dict(row), 'payload': json.loads(row['payload'])}
+            if item['payload'].get('retired', False):
+                continue
             expiry = item['payload'].get('expires_at')
             if expiry and dt.datetime.fromisoformat(expiry) <= dt.datetime.now(dt.timezone.utc) and not include_expired:
                 continue
@@ -371,6 +374,9 @@ class Store:
 
     def evaluate(self, pid, cases_file, timeout=180):
         proposal = self.proposal(pid)
+        if 'maintenance_action' in proposal['payload']:
+            from uw_maintenance import evaluate
+            return evaluate(self, pid, cases_file, timeout)
         require(proposal['status'] == 'pending', 'Proposal already decided')
         command = self.config.get('evaluator')
         require(isinstance(command, list) and command and all(isinstance(x, str) and x for x in command), 'Configure evaluator as a trusted argv array first')
@@ -408,6 +414,9 @@ class Store:
         return self.transaction(save_receipt)
 
     def decide(self, pid, accept=False, actor='owner'):
+        if 'maintenance_action' in self.proposal(pid)['payload']:
+            from uw_maintenance import decide
+            return decide(self, pid, accept, actor)
         def work():
             proposal = self.proposal(pid)
             require(proposal['status'] == 'pending', 'Proposal already decided')
@@ -455,6 +464,11 @@ class Store:
         try:
             self.db.execute('BEGIN')
             snapshot = {table: [dict(r) for r in self.db.execute('SELECT * FROM ' + table)] for table in ('memories', 'history', 'events', 'reviews', 'proposals')}
+            present = {r[0] for r in self.db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            for table in ('maintenance_reviews', 'maintenance_index', 'maintenance_tags'):
+                if table in present:
+                    snapshot[table] = [dict(r) for r in self.db.execute('SELECT * FROM ' + table)]
+            snapshot['maintenance_state'] = [dict(r) for r in self.db.execute("SELECT * FROM metadata WHERE key='maintenance_cursor_v1'")]
             self.db.commit()
         except BaseException:
             self.db.rollback()
@@ -610,6 +624,10 @@ def main():
     p = sub.add_parser('prepare'); p.add_argument('--out'); p.add_argument('--force', action='store_true')
     p = sub.add_parser('submit'); p.add_argument('--packet', required=True); p.add_argument('--response', required=True)
     p = sub.add_parser('dream-run'); p.add_argument('--engine', choices=('claude','codex')); p.add_argument('--force', action='store_true')
+    p = sub.add_parser('maintenance-prepare'); p.add_argument('--limit', type=int, default=25); p.add_argument('--out')
+    p = sub.add_parser('maintenance-submit'); p.add_argument('--packet', required=True); p.add_argument('--response', required=True)
+    p = sub.add_parser('maintenance-cancel'); p.add_argument('--id', required=True)
+    p = sub.add_parser('maintenance-run'); p.add_argument('--engine', choices=('claude','codex')); p.add_argument('--limit', type=int, default=25)
     sub.add_parser('proposals')
     p = sub.add_parser('evaluate'); p.add_argument('--id', required=True); p.add_argument('--cases', required=True); p.add_argument('--timeout', type=int, default=180)
     p = sub.add_parser('decide'); p.add_argument('--id', required=True); p.add_argument('--actor', default='owner')
@@ -639,6 +657,12 @@ def main():
         elif c=='prepare': emit(store.prepare(args.force), args.out); return 0
         elif c=='submit': result=store.submit(read_json(args.packet), read_json(args.response))
         elif c=='dream-run': result=dream_run(store, args.engine, args.force)
+        elif c.startswith('maintenance-'):
+            import uw_maintenance
+            if c=='maintenance-prepare': emit(uw_maintenance.prepare(store,args.limit),args.out); return 0
+            elif c=='maintenance-submit': result=uw_maintenance.submit(store,read_json(args.packet),read_json(args.response))
+            elif c=='maintenance-cancel': result=uw_maintenance.cancel(store,args.id)
+            elif c=='maintenance-run': result=uw_maintenance.dream_run(store,args.engine,args.limit)
         elif c=='proposals': result=[store.proposal(r['id']) for r in store.db.execute("SELECT id FROM proposals WHERE status='pending'")]
         elif c=='evaluate': result=store.evaluate(args.id,args.cases,args.timeout)
         elif c=='decide': result=store.decide(args.id,args.accept,args.actor)
