@@ -22,6 +22,7 @@ import threading
 import time
 
 import uw
+from uw_service_storage import ServiceError, StorageBudget, StoreQuota
 
 MAX_BODY = 1_000_000
 MAX_RESPONSE = 2_000_000
@@ -44,11 +45,6 @@ READ_ACTIONS = {'recall', 'current', 'history', 'status', 'review-get', 'proposa
 WRITE_ACTIONS = {'remember', 'record', 'expire', 'rollback', 'review-prepare', 'review-submit', 'proposal-decide'}
 ROUTE = re.compile(r'/v1/(organization|team|individual|scratch)/([a-z-]+)')
 NAME = re.compile(r'[a-z0-9][a-z0-9_-]{0,63}')
-
-
-class ServiceError(Exception):
-    def __init__(self, status, message):
-        self.status, self.message = status, message
 
 
 def name(value):
@@ -208,6 +204,18 @@ def administer(directory, action, user, *, org=None, teams=(), org_writer=False,
 class ServiceStore(uw.Store):
     """Service-only quotas and workflow gates; the trusted local CLI is unchanged."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            self.storage_quota = StoreQuota(self)
+        except BaseException:
+            self.db.close()
+            raise
+
+    def transaction(self, fn):
+        with self.storage_quota.transaction():
+            return fn()
+
     def memory_count(self):
         return self.db.execute('SELECT COUNT(*) FROM (SELECT 1 FROM memories LIMIT ?)',
                                (MAX_NAMESPACE_MEMORIES + 1,)).fetchone()[0]
@@ -300,6 +308,7 @@ class MemoryService:
         self.rate = defaultdict(deque)
         self.lock = threading.RLock()
         self.scan_budget = None
+        self.storage_budget = None
 
     def _rate_limit(self, key, limit):
         current = time.monotonic()
@@ -361,6 +370,8 @@ class MemoryService:
 
     @contextmanager
     def _store(self, target):
+        budget = self.storage_budget or StorageBudget(self.directory)
+        budget.reserve(target)
         path = self.directory / 'state'
         for component in target:
             name(component)
@@ -419,10 +430,14 @@ class MemoryService:
             # All commands use project scope inside a physically separate namespace store.
             self.scan_budget = {'remaining': MAX_RECALL_SCAN}
             try:
+                self.storage_budget = StorageBudget(self.directory)
                 with self._store(target) as store:
+                    if action in WRITE_ACTIONS:
+                        return store.transaction(lambda: self._dispatch(store, policy, user, principal, target, action, data))
                     return self._dispatch(store, policy, user, principal, target, action, data)
             finally:
                 self.scan_budget = None
+                self.storage_budget = None
 
     def _dispatch(self, store, policy, user, principal, target, action, data):
         if action == 'status':

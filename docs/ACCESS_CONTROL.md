@@ -35,7 +35,32 @@ python3 "$SERVICE" serve --directory /absolute/private/memory-service --port 876
 
 The server processes one request at a time, queues at most eight connections, uses five-second absolute connection deadlines as well as socket inactivity timeouts, limits request bodies to 1 MB and responses to 2 MB, and applies per-principal request limits (120/minute by default, configurable from 1 to 600). Invalid credentials have a separate bounded rate bucket. It does not log request bodies, tokens, or project paths. OS and local network controls remain necessary against denial of service.
 
-Each namespace is limited to 1,000 current memories and 128 KB per serialized memory. New memories, including accepted proposals, enforce these limits inside their transaction. Recall retains only the requested best matches and scans at most 1,000 memories across the selected namespace and inherited scopes combined. Preparation uses the same bounded reader. A store enlarged beyond these limits by local tools, or a search exceeding the combined scan budget, returns HTTP 413 instead of a partial result. An administrator must maintain oversized stores with the trusted local tools. These limits bound service reads and writes; they are not a total disk quota for event and revision history.
+Each namespace is limited to 1,000 current memories and 128 KB per serialized memory. New memories, including accepted proposals, enforce these limits inside their transaction. Recall retains only the requested best matches and scans at most 1,000 memories across the selected namespace and inherited scopes combined. Preparation uses the same bounded reader. A store enlarged beyond these limits by local tools, or a search exceeding the combined scan budget, returns HTTP 413 instead of a partial result.
+
+## Storage admission and retained audit data
+
+The service also limits accumulated data. Updating one memory repeatedly consumes history capacity; recording events or repeatedly preparing the same review consumes the corresponding retained-row capacity.
+
+| Resource | Default service limit |
+| --- | --- |
+| History revisions per namespace | 10,000 |
+| Events per namespace | 10,000 |
+| Prepared and reviewed packets per namespace, combined | 1,000 |
+| Pending and decided proposals per namespace, combined | 1,000 |
+| SQLite logical database size per namespace, including indexes and free pages | 16 MiB |
+| Namespace file lengths, including database, WAL, SHM, configuration, and other retained files | 64 MiB |
+| File lengths across the entire service `state` directory | 1 GiB |
+| Entries beneath `state`, including directories | 8,192, with a maximum traversal depth of eight |
+
+These are service admission limits, not an OS filesystem quota. Filesystem allocation units and directory metadata are outside the file-length calculation. Operators must provide appropriate volume capacity and OS controls. The private policy file has its separate 128 KB limit. HTTP clients cannot change any of these limits.
+
+A bounded metadata walk counts existing files without loading their contents. Before opening any namespace, the service reserves its possible database/WAL checkpoint peak plus 1 MiB for WAL frame headers, shared memory, and initialization overhead. Reservations include new directories and files, and remain held through the request, including while inherited namespaces are opened. Existing crash-left WAL files receive additional conservative growth allowance; a read-only SQLite preflight rejects a logical database over its page limit without checkpointing its data into the main file. Opening a namespace for a read can also need this headroom. Requests can therefore receive HTTP 413 before reaching the nominal byte limit; an administrator should maintain capacity before it becomes tight.
+
+All writes in one request use a single SQLite transaction, including review preparation and its final inherited context, multi-proposal submission, and proposal decisions. Connection-local transactional counters reject excess retained rows before insertion. A SQLite page cap also bounds payloads and index growth; dirty-page spilling is disabled so uncommitted work cannot grow the WAL. A successful truncating checkpoint is required before a write, and another is attempted afterward. A reader blocking the initial checkpoint produces HTTP 503 before any mutation. If a reader starts after admission and blocks the final checkpoint, the committed result remains successful and its WAL remains within the reserved allowance; the next write must checkpoint first. These controls follow SQLite's documented [WAL checkpoint behavior](https://www.sqlite.org/wal.html) and [page, cache-spill, and journal pragmas](https://www.sqlite.org/pragma.html).
+
+Quota rejection rolls back the whole mutation. Existing history and events are preserved, failed submissions leave their review prepared, and rejected acceptances leave proposals pending. The service never deletes audit history to make room. Temporary counters are rebuilt from bounded row counts when a connection opens, so a failed transaction cannot leave a persistent quota ledger out of sync. Administration and other service instances use the same policy lock as admission and commit.
+
+Archive or maintain full namespaces using trusted local tools while the service is stopped. Keep archived copies outside `state` if they should no longer count toward service capacity. Local owner tools retain their original behavior; their writes are not governed by these service quotas and must not run concurrently with service writes. Preexisting oversized or unsupported state fails closed rather than being silently pruned.
 
 ## HTTP contract
 
@@ -112,6 +137,8 @@ Generated policy, credentials, namespace stores, and review data are private dep
 ## Verification and current limits
 
 `test_service.py` uses a real loopback HTTP server and multiple independent bearer credentials. It tests unauthenticated/forged claims, cross-organization/team/user/scratch isolation, inherited read versus write access, review-input filtering, foreign packet/proposal access, membership revocation, token rotation/revocation without restart, owner-policy revision and size guards, bounded routes and scans, quota enforcement on accepted proposals, Unicode review batching, workflow rollback/expiration rejection, body/rate limits, and private state permissions. Workflow gate tests use a local fixture evaluator; tests call no model providers.
+
+`test_service_storage.py` covers repeated updates to one key, event and review accumulation, transactional rejection partway through a proposal batch, pending decisions at capacity, SQLite page exhaustion without WAL growth, shared capacity across namespaces, initialization entry reservations, legacy WAL checkpoint peaks, crash-left oversized logical databases, blocked readers, concurrent service instances, and HTTP 413 responses. Rejected mutations are checked against their retained rows and file sizes.
 
 This release deliberately omits HTTP trace import, maintenance/parallel-worker execution, evaluator execution, policy editing, and raw export/backup routes. Those operations remain owner-controlled local tools until a scoped service adapter is added and tested. The service is an enforceable local authenticated interface; it does not establish enterprise deployment security or protect against its own OS account.
 
