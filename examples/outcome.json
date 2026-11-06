@@ -1,0 +1,7 @@
+{
+  "session": "example-task-001",
+  "status": "unverified",
+  "summary": "Example only: replace this with a measured result and a real evidence reference.",
+  "evidence": ["replace-with-real-log-path"],
+  "domain": "software"
+}
