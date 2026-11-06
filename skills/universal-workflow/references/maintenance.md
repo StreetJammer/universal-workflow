@@ -43,6 +43,8 @@ Any operation that affects a workflow requires an independently executed evaluat
 
 The receipt binds the entire proposal, candidate state, and all source hashes. Every source and target is rechecked when saving the receipt and again during acceptance. A stale or failed operation leaves every memory unchanged. Reject and regenerate stale proposals; never bypass the evaluation gate.
 
+The complete candidate payloads are frozen when the proposal is submitted, including provenance, merged-source links, expiry, and retirement timestamps. Evaluation reads exactly those payloads and acceptance writes them unchanged. A merge's expiry is calculated from proposal time; waiting to accept does not extend it. Reject and regenerate an old proposal if that expiry no longer fits the task. Legacy pending proposals without frozen payloads must also be rejected and regenerated; their earlier receipts cannot authorize a new write shape.
+
 Restore a retired memory using the standard `history` and `rollback` commands, selecting the pre-retirement revision and the current hash. Restoration appends another revision; it does not erase the retirement. For a merge, restoring an old source does not remove the consolidated target—review both records before choosing further changes.
 
 ## Optional external worker

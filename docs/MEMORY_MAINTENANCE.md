@@ -15,9 +15,9 @@ Use the [maintenance reference](../skills/universal-workflow/references/maintena
 
 ## Validation
 
-Seventeen deterministic regression tests cover 125-memory sweeps, late insertions, old/expired memories, concurrent prepares, retry/cancel behavior, cross-batch duplicates and possible conflicts, versioned retirement/restore, merge atomicity under injected database failure, stale sources/targets, invalid/tampered/foreign packets, evaluator gates, source changes during evaluation, event-watermark independence, exports, CLI round trips, and large Unicode packets.
+Twenty-one deterministic regression tests cover 125-memory sweeps, late insertions, old/expired memories, concurrent prepares, retry/cancel behavior, cross-batch duplicates and possible conflicts, versioned retirement/restore, merge atomicity under injected database failure, stale sources/targets, invalid/tampered/foreign packets, evaluator gates, source changes during evaluation, event-watermark independence, exports, CLI round trips, and large Unicode packets. They also verify that accepted merge/retire payloads exactly equal what the evaluator received, that an expiry constraint can block a merge, and that legacy unfrozen proposals fail closed.
 
-The complete local suite contains 77 tests on the initial-release base: 76 pass on Linux and the Windows junction test is explicitly skipped. All maintenance tests pass on that base. Root integration adds other feature suites separately. Fixture evaluators test the gate's behavior; they do not establish real model learning gains or domain-level accuracy. Native authenticated host execution and persistent scheduling remain deployment checks.
+The complete local suite contains 81 tests on the initial-release base: 80 pass on Linux and the Windows junction test is explicitly skipped. All maintenance tests pass on that base. Root integration adds other feature suites separately. Fixture evaluators test the gate's behavior; they do not establish real model learning gains or domain-level accuracy. Native authenticated host execution and persistent scheduling remain deployment checks.
 
 ## Scope
 

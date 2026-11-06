@@ -33,12 +33,14 @@ class MaintenanceTests(unittest.TestCase):
         return {'action':'merge', 'key':key, 'source_keys':sources or ['a','b'],
                 'kind':kind, 'body':'Consolidated verified fact.', 'reason':'Both records document the same fact.'}
 
-    def evaluator(self):
+    def evaluator(self, capture=None, require_no_expiry=False):
         script = self.root/'evaluate.py'
         script.write_text('import json,sys\np=json.load(sys.stdin)\n'
             'assert isinstance(p["baseline"],dict) and isinstance(p["candidate"],dict)\n'
             'assert any(m.get("retired") for m in p["candidate"].values())\n'
-            'print(json.dumps({"cases":[{"id":c["id"],"baseline_pass":False,"candidate_pass":True,"fixed_constraints_pass":True} for c in p["cases"]]}))\n',encoding='utf-8')
+            + (f'from pathlib import Path\nPath({str(capture)!r}).write_text(json.dumps(p["candidate"]),encoding="utf-8")\n' if capture else '')
+            + ('allowed=all(m.get("expires_at") is None for m in p["candidate"].values() if not m.get("retired",False))\n' if require_no_expiry else 'allowed=True\n')
+            + 'print(json.dumps({"cases":[{"id":c["id"],"baseline_pass":False,"candidate_pass":True,"fixed_constraints_pass":allowed} for c in p["cases"]]}))\n',encoding='utf-8')
         cases = self.root/'cases.json'
         cases.write_text(json.dumps([{'id':'heldout-' + str(n)} for n in range(3)]),encoding='utf-8')
         self.store.config['evaluator'] = [sys.executable, str(script)]
@@ -201,6 +203,63 @@ class MaintenanceTests(unittest.TestCase):
         old=self.store.current('a')
         self.store.expire('a',old['hash'])
         with self.assertRaisesRegex(ValueError,'source changed'): self.store.decide(pid,True)
+
+    def test_merge_persists_exact_payloads_seen_by_evaluator(self):
+        for number, new_target in enumerate((False, True)):
+            with self.subTest(new_target=new_target):
+                a, b = 'flow-' + str(number), 'note-' + str(number)
+                self.workflow(a); self.put(b)
+                target = 'combined-' + str(number) if new_target else a
+                pid = self.proposal(self.merge(key=target,sources=[a,b],kind='workflow'))
+                capture = self.root / ('evaluated-' + str(number) + '.json')
+                receipt = self.store.evaluate(pid,self.evaluator(capture=capture))
+                self.assertTrue(receipt['passed'])
+                expected = json.loads(capture.read_text(encoding='utf-8'))
+                proposal = self.store.proposal(pid)['payload']
+                self.assertEqual(expected,proposal['candidate_payloads'])
+                self.assertIsNotNone(expected[target]['expires_at'])
+                self.assertEqual(expected[target]['merged_from'],sorted([a,b]))
+                self.assertTrue(all(e.startswith('memory:') for e in expected[target]['evidence']))
+                with patch.object(maintenance,'now',return_value='2040-01-01T00:00:00+00:00'):
+                    self.store.decide(pid,True)
+                actual = {key:self.store.current(key)['payload'] for key in expected}
+                self.assertEqual(uw.canon(actual),uw.canon(expected))
+                self.assertEqual(actual[b]['retired_at'],proposal['proposed_at'])
+
+    def test_retirement_persists_exact_payload_seen_by_evaluator(self):
+        self.workflow('a')
+        pid = self.proposal({'action':'retire','key':'a','reason':'Superseded workflow.'})
+        capture = self.root / 'retirement-candidate.json'
+        self.assertTrue(self.store.evaluate(pid,self.evaluator(capture=capture))['passed'])
+        expected = json.loads(capture.read_text(encoding='utf-8'))
+        with patch.object(maintenance,'now',return_value='2040-01-01T00:00:00+00:00'):
+            self.store.decide(pid,True)
+        self.assertEqual(self.store.current('a')['payload'],expected['a'])
+
+    def test_expiry_constraint_failure_cannot_authorize_merge(self):
+        self.workflow('a'); self.put('b')
+        before = {key:self.store.current(key) for key in ('a','b')}
+        pid = self.proposal(self.merge(kind='workflow'))
+        receipt = self.store.evaluate(pid,self.evaluator(require_no_expiry=True))
+        self.assertFalse(receipt['passed'],'The evaluator must see the actual non-null expiry of the merged target')
+        with self.assertRaisesRegex(ValueError,'evaluator receipt'):
+            self.store.decide(pid,True)
+        self.assertEqual({key:self.store.current(key) for key in ('a','b')},before)
+
+    def test_legacy_unfrozen_proposal_requires_regeneration(self):
+        self.put('a'); self.put('b')
+        pid = self.proposal(self.merge())
+        payload = self.store.proposal(pid)['payload']
+        del payload['candidate_payloads']
+        del payload['proposed_at']
+        self.store.db.execute('UPDATE proposals SET payload=? WHERE id=?',(uw.canon(payload),pid))
+        self.store.db.commit()
+        with self.assertRaisesRegex(ValueError,'frozen candidate payloads'):
+            self.store.decide(pid,True)
+        with self.assertRaisesRegex(ValueError,'frozen candidate payloads'):
+            self.store.evaluate(pid,self.evaluator())
+        self.store.decide(pid,False)
+        self.assertEqual(self.store.proposal(pid)['status'],'rejected')
 
     def test_evaluator_cannot_save_receipt_after_source_changes(self):
         self.workflow('a')

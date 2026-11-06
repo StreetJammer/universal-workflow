@@ -191,6 +191,8 @@ def submit(store, packet, response):
                        'expected_hash': old['hash'] if old else 'NEW',
                        'baseline': canon({k: m['payload'] for k, m in sources.items()}),
                        'requires_evaluation': kind == 'workflow' or any(m['payload']['kind'] == 'workflow' for m in sources.values())}
+            payload['proposed_at'] = now()
+            payload['candidate_payloads'] = _freeze_candidate(payload)
             _sources(store, payload)
             pid = str(uuid.uuid4())
             store.db.execute('INSERT INTO proposals VALUES(?,?,?,?,NULL)', (pid, packet['review_id'], canon(payload), 'pending'))
@@ -208,19 +210,33 @@ def submit(store, packet, response):
     return store.transaction(work)
 
 
-def _candidate(proposal):
-    # A full-state representation lets the evaluator measure source retirement,
-    # not just the merged target body, against the exact baseline snapshot.
+def _freeze_candidate(proposal):
+    # Freeze every payload field at proposal time, including metadata and expiry.
+    # Evaluators and acceptance must see exactly the same proposed write set.
     states = json.loads(proposal['baseline'])
     for key, payload in states.items():
         if proposal['maintenance_action'] == 'retire' or key != proposal['key']:
             payload['retired'] = True
+            payload['retired_at'] = proposal['proposed_at']
             payload['retirement_reason'] = proposal['reason']
             if proposal['maintenance_action'] == 'merge': payload['merged_into'] = proposal['key']
     if proposal['maintenance_action'] == 'merge':
-        states[proposal['key']] = {'kind': proposal['kind'], 'body': proposal['body'], 'retired': False,
-                                   'source_keys': sorted(proposal['source_hashes']), 'ttl_days': proposal['ttl_days']}
+        stamp = dt.datetime.fromisoformat(proposal['proposed_at'])
+        expires = (stamp + dt.timedelta(days=proposal['ttl_days'])).isoformat(timespec='seconds')
+        states[proposal['key']] = {'kind': proposal['kind'], 'body': proposal['body'],
+                                   'evidence': ['memory:' + k + '@' + h for k,h in proposal['source_hashes'].items()],
+                                   'expires_at': expires, 'merged_from': sorted(proposal['source_hashes'])}
     return states
+
+
+def _candidate(proposal):
+    states = proposal.get('candidate_payloads')
+    expected = set(proposal['source_hashes']) | {proposal['key']}
+    require(isinstance(states, dict) and set(states) == expected and all(isinstance(p, dict) for p in states.values()),
+            'Maintenance proposal lacks frozen candidate payloads; reject it and prepare a fresh proposal')
+    # Return a detached value so downstream callers cannot mutate the persisted
+    # proposal while inspecting it or preparing evaluator input.
+    return json.loads(canon(states))
 
 
 def evaluate(store, pid, cases_file, timeout=180):
@@ -270,22 +286,15 @@ def decide(store, pid, accept=False, actor='owner'):
         if accept:
             # Integration seam: assert_review_policy; stale rejection stays allowed.
             sources = _sources(store, p)
+            candidate = _candidate(p)
             if p['requires_evaluation']:
                 receipt = proposal['receipt']
                 require(receipt is not None and receipt.get('passed') is True and receipt.get('proposal_hash') == digest(p)
-                        and receipt.get('candidate_hash') == digest(_candidate(p)) and receipt.get('source_hashes') == p['source_hashes'],
+                        and receipt.get('candidate_hash') == digest(candidate) and receipt.get('source_hashes') == p['source_hashes'],
                         'Workflow maintenance needs a passing full-state evaluator receipt')
-            for key, memory in sources.items():
-                if p['maintenance_action'] == 'merge' and key == p['key']: continue
-                payload = dict(memory['payload'])
-                payload.update(retired=True, retired_at=now(), retirement_reason=p['reason'])
-                if p['maintenance_action'] == 'merge': payload['merged_into'] = p['key']
-                revisions.append(store._put(key, payload, memory['hash'], actor))
-            if p['maintenance_action'] == 'merge':
-                expires = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=p['ttl_days'])).isoformat(timespec='seconds')
-                payload = {'kind': p['kind'], 'body': p['body'], 'evidence': ['memory:' + k + '@' + h for k,h in p['source_hashes'].items()],
-                           'expires_at': expires, 'merged_from': sorted(p['source_hashes'])}
-                revisions.append(store._put(p['key'], payload, p['expected_hash'], actor))
+            for key in sorted(candidate, key=lambda key: (key == p['key'], key)):
+                expected = p['expected_hash'] if key == p['key'] else sources[key]['hash']
+                revisions.append(store._put(key, candidate[key], expected, actor))
         store.db.execute('UPDATE proposals SET status=? WHERE id=?', ('accepted' if accept else 'rejected', pid))
         return {'id': pid, 'decision': 'accepted' if accept else 'rejected', 'revisions': revisions}
     return store.transaction(work)

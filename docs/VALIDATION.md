@@ -11,7 +11,7 @@ python3 scripts/validate_package.py
 python3 -m unittest discover -s skills/universal-workflow/scripts -p 'test_*.py' -v
 ```
 
-The suite contains **87 deterministic tests**: the 60-test foundation plus ten session-trace and seventeen maintenance regressions. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips seven POSIX-specific cases explicitly.
+The suite contains **91 deterministic tests**: the 60-test foundation plus ten session-trace and twenty-one maintenance regressions. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips seven POSIX-specific cases explicitly.
 
 | Area | Evidence and scope |
 | --- | --- |
