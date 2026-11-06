@@ -465,6 +465,13 @@ class Store:
         path = Path(destination).expanduser().resolve()
         require(not path.exists(), 'Backup destination already exists')
         path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            # Reserve a private destination before SQLite can write any data.
+            # O_EXCL also rejects a file created after the initial existence check.
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError as error:
+            raise ValueError('Backup destination already exists') from error
+        os.close(fd)
         target = sqlite3.connect(path)
         try:
             self.db.backup(target)

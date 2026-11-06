@@ -199,6 +199,37 @@ class RuntimeTests(unittest.TestCase):
             db.close()
         with self.assertRaises(ValueError): self.store.backup(backup)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX permission bits; Windows uses ACLs')
+    def test_backup_is_private_before_sqlite_opens_it(self):
+        destination = self.root / 'private-backup.sqlite3'
+        original_connect = sqlite3.connect
+        observed_modes = []
+        def connect(path, *args, **kwargs):
+            observed_modes.append(Path(path).stat().st_mode & 0o777)
+            return original_connect(path, *args, **kwargs)
+        old_umask = os.umask(0o022)
+        try:
+            with patch.object(uw.sqlite3, 'connect', side_effect=connect):
+                self.store.backup(destination)
+        finally:
+            os.umask(old_umask)
+        self.assertEqual(observed_modes, [0o600])
+        self.assertEqual(destination.stat().st_mode & 0o777, 0o600)
+
+    def test_backup_preserves_a_concurrently_created_destination(self):
+        destination = self.root / 'competing-backup.sqlite3'
+        original_open = os.open
+        def open_after_competitor(path, flags, mode=0o777, **kwargs):
+            if Path(path) == destination:
+                fd = original_open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                with os.fdopen(fd, 'wb') as output:
+                    output.write(b'Other writer data')
+            return original_open(path, flags, mode, **kwargs)
+        with patch.object(uw.os, 'open', side_effect=open_after_competitor):
+            with self.assertRaisesRegex(ValueError, 'already exists'):
+                self.store.backup(destination)
+        self.assertEqual(destination.read_bytes(), b'Other writer data')
+
     def test_worker_timeout_and_failure_do_not_promote(self):
         with self.assertRaisesRegex(ValueError,'timed out'):
             uw.run_process([sys.executable,'-c','import time; time.sleep(3)'],'',self.project,1)
