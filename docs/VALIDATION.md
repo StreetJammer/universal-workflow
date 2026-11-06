@@ -1,6 +1,6 @@
 # Validation record — 0.1.0 preview
 
-This release is ready for a public review PR after repository access is available. It is not a claim of universal compatibility or production certification.
+This release is available in [review PR #1](https://github.com/StreetJammer/universal-workflow/pull/1). It is not a claim of universal compatibility or production certification.
 
 ## Reproduce local checks
 
@@ -11,12 +11,12 @@ python3 scripts/validate_package.py
 python3 -m unittest discover -s skills/universal-workflow/scripts -p 'test_*.py' -v
 ```
 
-The local release suite contains **48 deterministic tests**: 23 runtime/integration tests, 14 concurrency and failure regressions, and 11 packaging/hook regressions. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects.
+The local release suite contains **51 deterministic tests**: 23 runtime/integration tests, 17 concurrency and failure regressions, and 11 packaging/hook regressions. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Windows skips four POSIX-specific cases explicitly.
 
 | Area | Evidence and scope |
 | --- | --- |
 | Memory lifecycle | Create, read, update, expiry, history, rollback, project/scratch scope, secret-pattern rejection |
-| Concurrent integrity | Competing writes, revision-bound hashes after rollback, 12 simultaneous initializers, paused config publication, injected transaction failure |
+| Concurrent integrity | Competing writes, revision-bound hashes after rollback, 12 simultaneous initializers, paused config publication, injected transaction failure, bounded retry of Windows delete-pending locks |
 | Review integrity | Packet tampering, foreign evidence, partial invalid batches, overlapping reviews, stale proposals, derived session counts |
 | Evaluation | A real subprocess evaluates controlled cases; passing receipt required for workflows; regressions and fixed-constraint failures rejected; late evaluations cannot rewrite accepted receipts |
 | Worker failure | Timeout, nonzero exit, lease exclusion, interruption cleanup on POSIX, fake Claude/Codex executable transport |
@@ -40,7 +40,7 @@ Separate offline runtime and packaging audits reproduced issues, then checked re
 
 | Check | Status |
 | --- | --- |
-| GitHub Actions on Linux/macOS/Windows, Python 3.10/3.12 | Matrix configured; hosted execution pending publication |
+| GitHub Actions on Linux/macOS/Windows, Python 3.10/3.12 | Running on PR #1; require all six jobs green on the latest revision |
 | Native Claude plugin discovery, commands, and hook events | Format inspected against official documentation; native CLI unavailable here |
 | Native Codex discovery and authenticated `exec` | Documented interface implemented; native CLI unavailable here |
 | Model-backed review quality and real evaluator improvements | Requires authenticated host and task-specific held-out cases |
@@ -48,8 +48,10 @@ Separate offline runtime and packaging audits reproduced issues, then checked re
 | Windows privileged symlink creation | Symlink regressions are POSIX-only; no false pass reported |
 | Game engine, browser, render, or deployment integrations | Delegated to destination tools; not exercised by these runtime tests |
 | Unattended execution | Scheduler recipe supplied; no schedule activated by the package |
-| `@codex review` on the public PR | Pending repository/PR creation and review integration access |
+| `@codex review` on the public PR | Requested on PR #1; code and security reviews started |
 
 ## Release decision
+
+The first hosted run exposed a Windows delete-pending directory race during initialization and an unclosed SQLite connection in the backup test. Both are repaired in this PR. Three added regressions exercise transient retry, bounded persistent denial, and propagation of unrelated permission errors; the hosted Windows jobs provide native confirmation.
 
 Publish as **0.1.0 preview** with this evidence and the [gap analysis](GAP_ANALYSIS.md). Require hosted CI and review findings to be resolved before merging the implementation PR. Keep live host checks visible; do not upgrade compatibility claims merely because mocks pass.

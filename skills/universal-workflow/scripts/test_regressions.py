@@ -15,6 +15,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 SOURCE = HERE / "uw.py"
@@ -298,6 +299,56 @@ class RuntimeAudit(unittest.TestCase):
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
             identities = list(pool.map(initialize, range(12)))
         self.assertEqual(len(set(identities)), 1)
+
+    def test_windows_delete_pending_init_lock_retries(self):
+        project = self.root / 'delete-pending-lock'
+        project.mkdir()
+        original_mkdir = Path.mkdir
+        attempts = []
+        def mkdir(path, *args, **kwargs):
+            if path.name == '.init.lock':
+                attempts.append(path)
+                if len(attempts) == 1:
+                    error = PermissionError('Windows delete-pending directory')
+                    error.winerror = 5
+                    raise error
+            return original_mkdir(path, *args, **kwargs)
+        with patch.object(Path, 'mkdir', mkdir):
+            store = uw.Store(project, create=True)
+            try:
+                identity = store.status()['project_id']
+                self.assertTrue(identity)
+            finally:
+                store.close()
+        self.assertEqual(len(attempts), 2)
+        reopened = uw.Store(project)
+        try:
+            self.assertEqual(reopened.status()['project_id'], identity)
+        finally:
+            reopened.close()
+
+    def test_init_lock_access_denied_is_bounded(self):
+        original_mkdir = Path.mkdir
+        def mkdir(path, *args, **kwargs):
+            if path.name == '.init.lock':
+                error = PermissionError('Persistent Windows access denial')
+                error.winerror = 5
+                raise error
+            return original_mkdir(path, *args, **kwargs)
+        with patch.object(Path, 'mkdir', mkdir), patch.object(uw.time, 'monotonic', side_effect=[0, 6]):
+            with self.assertRaisesRegex(ValueError, 'inaccessible'):
+                uw.Store(self.project, create=True)
+        self.assertFalse((self.store.root / '.init.lock').exists())
+
+    def test_init_lock_unrelated_permission_errors_propagate(self):
+        original_mkdir = Path.mkdir
+        def mkdir(path, *args, **kwargs):
+            if path.name == '.init.lock':
+                raise PermissionError('Unrelated permission failure')
+            return original_mkdir(path, *args, **kwargs)
+        with patch.object(Path, 'mkdir', mkdir):
+            with self.assertRaisesRegex(PermissionError, 'Unrelated'):
+                uw.Store(self.project, create=True)
 
 
 if __name__ == '__main__':

@@ -110,8 +110,13 @@ class Store:
                 try:
                     lock.mkdir()
                     break
-                except FileExistsError:
-                    require(time.monotonic() < deadline, 'Initialization lock is busy or stale; inspect it before retrying')
+                except (FileExistsError, PermissionError) as error:
+                    # Windows can report access denied while another initializer's
+                    # removed directory is still delete-pending. Retry only that
+                    # OS-specific error, under the same bounded contention budget.
+                    if isinstance(error, PermissionError) and getattr(error, 'winerror', None) != 5:
+                        raise
+                    require(time.monotonic() < deadline, 'Initialization lock is busy, stale, or inaccessible; inspect it before retrying')
                     time.sleep(0.05)
             try:
                 require(config.exists() == database.exists(), 'Incomplete store: restore config and database together; refusing to recreate missing state')

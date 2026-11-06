@@ -48,7 +48,7 @@ No API key is needed for installation, memory operations, or prompt assembly. Li
 
 ## Quick start
 
-Clone the repository once it is published, then choose one integration:
+Clone the repository, then choose one integration:
 
 ```bash
 git clone https://github.com/StreetJammer/universal-workflow.git
@@ -206,7 +206,7 @@ python3 -m unittest discover -s skills/universal-workflow/scripts -p 'test_*.py'
 
 The suite exercises memory history, conflicts, project isolation, expiry, proposal validation, evaluation gates, subprocess failures, hook behavior, and installer preservation. CLI transport tests use fake executables and do not call paid models. [Validation evidence and remaining gaps](docs/VALIDATION.md).
 
-CI is configured for Linux, macOS, and Windows. The workflow badge reports actual GitHub results after publication; a configured matrix is not a claim that those hosted checks have already run.
+CI runs on Linux, macOS, and Windows. Check the pull request's latest six matrix jobs for the proposed revision; the default-branch badge does not establish that an unmerged branch passes.
 
 ## Boundaries
 

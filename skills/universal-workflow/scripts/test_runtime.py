@@ -192,8 +192,11 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(json.loads((out/'snapshot.json').read_text())['project_id'],self.store.config['project_id'])
         backup=self.root/'backup.sqlite3'
         self.store.backup(backup)
-        with sqlite3.connect(backup) as db:
+        db = sqlite3.connect(backup)
+        try:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM memories').fetchone()[0],1)
+        finally:
+            db.close()
         with self.assertRaises(ValueError): self.store.backup(backup)
 
     def test_worker_timeout_and_failure_do_not_promote(self):

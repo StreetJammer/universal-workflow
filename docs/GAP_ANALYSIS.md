@@ -12,6 +12,8 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Unicode batches could exceed submit's input limit | Byte-budget packets and keep remaining events eligible | All 50 large events round-trip in sequence |
 | Read-only status recreated a missing database | Open existing stores only and validate identity/schema | Missing database remains missing with actionable error |
 | Initializers could observe partially written configuration | Serialize initialization and atomically publish config | Controlled pause and 12 concurrent initializers |
+| Windows reported access denied for a delete-pending initialization lock | Retry Windows error 5 within the existing five-second budget; propagate unrelated errors | Transient, persistent, and unrelated-error regressions plus Windows CI |
+| Backup test retained a SQLite connection until garbage collection | Explicitly close the connection before fixture cleanup | Backup lifecycle test on Windows CI |
 | Non-object config caused a traceback | Validate config shape before access | Structured JSON error for `[]` |
 | Concurrent overlapping reviews reused consumed events | Reject already-consumed sequence ranges | Second overlapping packet rejected |
 | Child projects inherited parent context | Stop at Git/worktree or explicit host project boundary | Independent Git and non-Git project probes |
@@ -27,7 +29,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Area | Current boundary | Evidence needed to expand it |
 | --- | --- | --- |
 | Native integrations | Claude/Codex transport mocks and documented formats | Authenticated native CLI installation and real host smoke checks |
-| Operating systems | Local Linux/Python 3.12 run; six hosted jobs configured | Actual green CI jobs for each advertised matrix entry |
+| Operating systems | Local Linux/Python 3.12 run; six hosted jobs active on PR #1 | All six jobs must pass on the latest revision |
 | Automatic improvement | Proposal-only review; trusted external evaluator controls workflow promotion | Project-owned tasks and meaningful held-out measures |
 | Multi-user security | Local filesystem trust, project scopes, provenance labels | Authenticated service, tenant isolation, enforced policy, operational review |
 | Retrieval scale | Lexical retrieval with bounded context | Benchmarks for larger stores and a justified search upgrade |
@@ -37,7 +39,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Non-Git discovery | Explicit host root respected; nearest store fallback without one | Initialize separate project stores or provide the host root |
 | Windows process trees | Immediate worker termination only | Native process-tree supervision and integration checks |
 | Store upgrades | First public schema 1; unpublished development stores rejected | Versioned migration when a released schema changes |
-| Public review | PR body, reviewer rules, and CI prepared | Repository access, public PR, `@codex review`, fixes for reproducible findings |
+| Public review | PR #1 open; `@codex review` requested; code/security reviews running | Completed reviews and fixes for reproducible findings |
 
 No open reproducible failure remains in the local release suite. Passing those tests does not establish complete coverage of the speech's architecture. The external checks above remain pending and are not represented as passing tests.
 
@@ -51,4 +53,4 @@ The [full speech audit](SPEECH_AUDIT.md) identified incomplete features that the
 - Parallel reviewer orchestration and cross-batch/fleet aggregation.
 - Authenticated organization/team/individual scopes and matching review-input permissions.
 
-The first three are the highest-value local feature backlog; the last two remain scale-dependent architectural work. These are not implemented by the current 48-test suite. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
+The first three are the highest-value local feature backlog; the last two remain scale-dependent architectural work. These are not implemented by the current 51-test suite. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.

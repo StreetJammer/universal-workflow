@@ -4,8 +4,8 @@ Agents repeatedly rebuild task context and can adopt lessons without traceable e
 
 The optional standard-library Python runtime adds transactional revision history, rollback, expiry, exports, bounded review workers, and proposal approval. Workflow changes require a passing independently executed evaluator. Native memory remains the default for ordinary recall.
 
-Validation: 48 local deterministic tests plus structural checks, two separate task trials, and targeted concurrency/packaging audits. Fixes include rollback-token reuse, late evaluation races, oversized Unicode batches, initialization races, project-boundary leaks, hook event deduplication, and instruction-file preservation. See [validation](VALIDATION.md) and [gap analysis](GAP_ANALYSIS.md).
+Validation: 51 local deterministic tests plus structural checks, two separate task trials, and targeted concurrency/packaging audits. Fixes include rollback-token reuse, late evaluation races, oversized Unicode batches, initialization races, Windows delete-pending lock contention, project-boundary leaks, hook event deduplication, and instruction-file preservation. See [validation](VALIDATION.md) and [gap analysis](GAP_ANALYSIS.md).
 
-This is a 0.1.0 preview. Native Claude/Codex CLI checks and the six hosted CI jobs remain pending. No scheduler or model provider is activated by installation. The original third-party transcript and all private runtime data are excluded.
+This is a 0.1.0 preview. Native Claude/Codex CLI checks remain pending. Six hosted CI jobs run on the public PR; require all to pass on the latest revision. No scheduler or model provider is activated by installation. The original third-party transcript and all private runtime data are excluded.
 
 After opening the PR, post `@codex review` as a separate conversation comment. Check that the repository is enabled for Codex reviews, inspect returned findings, reproduce bugs, fix them on the PR branch, and rerun relevant checks before merge. Do not treat absence of a review response as approval.
