@@ -33,7 +33,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Native integrations | Claude/Codex transport mocks and documented formats | Authenticated native CLI installation and real host smoke checks |
 | Operating systems | Local Linux/Python 3.12 run; six hosted jobs passed for merged PR #1 | All six jobs must pass on the latest revision |
 | Automatic improvement | Proposal-only review; trusted external evaluator controls workflow promotion | Project-owned tasks and meaningful held-out measures |
-| Multi-user security | Local filesystem trust, project scopes, provenance labels | Authenticated service, tenant isolation, enforced policy, operational review |
+| Multi-user security | Optional authenticated loopback service with enforced namespaces and review ACLs; direct CLI still trusts its owner | Dedicated OS account/ACL deployment, enterprise identity/TLS integration and operational review |
 | Retrieval scale | Lexical retrieval with bounded context | Benchmarks for larger stores and a justified search upgrade |
 | Privacy | Minimal metadata, common credential-pattern filter | Project-specific data policy; filter is not comprehensive DLP |
 | Background operation | One CLI invocation with time/lease bounds; scheduler external | Persistent scheduler registration, logs, credentials, and operational ownership |
@@ -53,6 +53,6 @@ The [full speech audit](SPEECH_AUDIT.md) identified incomplete features that the
 - Completed locally: memory-only maintenance without new events, eventual key-order sweeps, cross-batch candidates, and versioned merge/retire proposals. See [maintenance](MEMORY_MAINTENANCE.md).
 - Completed locally: configurable include/focus/exclude priorities, deterministic limits, and stale-policy checks for event and maintenance reviews. See [review priorities](REVIEW_PRIORITIES.md).
 - Completed locally: bounded parallel session reviewers, evidence aggregation, global session denominators, and explicit conflict reconciliation. See [parallel review](PARALLEL_REVIEW.md).
-- Authenticated organization/team/individual scopes and matching review-input permissions.
+- Completed locally: authenticated organization/team/individual scopes, private scratch, and matching review-input permissions through an optional protected service. See [access control](ACCESS_CONTROL.md).
 
-The trace importer and maintenance are implemented with ten and seventeen added tests respectively. Review priorities are also implemented. Parallel review is implemented; access control remains pending its dedicated change on this branch. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
+All five changes have dedicated executable tests and separate feature PRs. See [validation](VALIDATION.md) for current test evidence. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.

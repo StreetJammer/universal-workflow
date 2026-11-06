@@ -44,7 +44,7 @@ Do not confuse successful prompt generation, a clean build, a screenshot, or an 
 
 Use native memory for personal preferences and ordinary recall. Put portable project lessons and evaluation evidence in the optional shared store only when useful; do not maintain competing copies of the same facts. Use [memory.md](references/memory.md) for its commands and policies. Save concise lessons with source evidence, project scope, timestamps, and an appropriate expiry. Record corrected assumptions, reproducible failures, and verified commands when not readily derivable from the current project. Do not save secrets, raw private conversations, hidden reasoning, or guesses as facts. Source references must point to observable artifacts or user statements.
 
-Keep fixed owner policy in existing `AGENTS.md`/`CLAUDE.md` or a protected policy service. Agents may write project lessons and scratch notes. Shared organizational policy changes are proposals. The local runtime enforces scoped writes through its API; enforce real multi-user permissions using OS/service isolation, not prompt instructions.
+Keep fixed owner policy in existing `AGENTS.md`/`CLAUDE.md` or a protected policy service. Agents may write project lessons and scratch notes. Shared organizational policy changes are proposals. The direct local runtime trusts its filesystem owner. For multiple identities, use the optional [authenticated service](references/access-control.md), protected under a dedicated OS account. Its namespace and review-input permissions are enforced by code; prompt instructions cannot grant access.
 
 Use the expected current hash for every update; on conflict, reread, reconcile, and retry. Preserve revision history. Use `export` for portable Markdown/JSON snapshots and `backup` for a consistent database backup. Treat exported Markdown as a read projection; write changes through the runtime.
 
@@ -82,5 +82,6 @@ Read [adapters.md](references/adapters.md) for the installer, Claude Code plugin
 - [maintenance.md](references/maintenance.md): memory-only sweeps, duplicate/conflict candidates, and versioned merge/retire decisions.
 - [review-priorities.md](references/review-priorities.md): bounded topic guidance, policy updates, and stale-review invalidation.
 - [parallel-review.md](references/parallel-review.md): bounded concurrent reviewers, evidence aggregation, and explicit reconciliation.
+- [access-control.md](references/access-control.md): authenticated namespaces, scoped review inputs, owner administration and deployment boundaries.
 - [adapters.md](references/adapters.md): installation and host integration.
 - [source-map.md](references/source-map.md): the entire supplied talk mapped to implementation and documented limitations.
