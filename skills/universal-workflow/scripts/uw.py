@@ -289,6 +289,9 @@ class Store:
         return self.transaction(lambda: self._record_event(eid, payload))
 
     def prepare(self, force=False):
+        from uw_policy import get_policy, attach_policy
+        policy = get_policy(self)
+        limits = policy['policy']['limits']
         watermark = self.db.execute("SELECT COALESCE(MAX(watermark),0) FROM reviews WHERE status='reviewed'").fetchone()[0]
         maximum = self.config.get('review_max_events', 50)
         minimum = self.config.get('review_min_events', 5)
@@ -298,9 +301,9 @@ class Store:
         if not rows or (len(rows) < minimum and not force):
             return {'due': False, 'new_events': len(rows), 'required': minimum}
         memories = []
-        budget = 40000
+        budget = limits['memory_char_budget']
         # Include expired items here so the reviewer can notice stale knowledge.
-        for m in self.recall(limit=100, include_expired=True):
+        for m in self.recall(limit=limits['max_memories'], include_expired=True):
             size = len(canon(m))
             if size > budget:
                 continue
@@ -319,7 +322,8 @@ class Store:
         packet = {'schema': 1, 'project_id': self.config['project_id'], 'review_id': str(uuid.uuid4()),
                   'watermark': events[-1]['seq'], 'created': now(), 'memories': memories,
                   'events': events,
-                  'memory_selection': 'up to 100 latest project memories within 40000 characters; scratch excluded'}
+                  'memory_selection': f"up to {limits['max_memories']} latest project memories within {limits['memory_char_budget']} characters; scratch excluded"}
+        attach_policy(self, packet, policy)
         self.db.execute('INSERT INTO reviews VALUES(?,?,?,?,?)', (packet['review_id'], canon(packet), packet['watermark'], 'prepared', now()))
         self.db.commit()
         return packet
@@ -332,6 +336,9 @@ class Store:
             row = self.db.execute('SELECT * FROM reviews WHERE id=?', (packet.get('review_id'),)).fetchone()
             require(row is not None and row['status'] == 'prepared', 'Review missing or already processed')
             require(row['packet'] == canon(packet), 'Review packet changed after preparation')
+            from uw_policy import assert_policy_current
+            policy = assert_policy_current(self, packet)
+            require(len(response['proposals']) <= policy['policy']['limits']['max_proposals'], 'Review policy proposal limit exceeded')
             reviewed = self.db.execute("SELECT COALESCE(MAX(watermark),0) FROM reviews WHERE status='reviewed'").fetchone()[0]
             require(packet['events'][0]['seq'] > reviewed, 'Review overlaps an already processed batch; prepare a new packet')
             events = {e['id']: e for e in packet['events']}
@@ -378,6 +385,8 @@ class Store:
             from uw_maintenance import evaluate
             return evaluate(self, pid, cases_file, timeout)
         require(proposal['status'] == 'pending', 'Proposal already decided')
+        from uw_policy import assert_review_policy
+        assert_review_policy(self, proposal['review_id'])
         command = self.config.get('evaluator')
         require(isinstance(command, list) and command and all(isinstance(x, str) and x for x in command), 'Configure evaluator as a trusted argv array first')
         cases = read_json(cases_file)
@@ -407,6 +416,7 @@ class Store:
             latest = self.proposal(pid)
             require(latest['status'] == 'pending' and latest['payload'] == p
                     and latest['receipt'] == proposal['receipt'], 'Proposal or evaluation changed while evaluator was running')
+            assert_review_policy(self, latest['review_id'])
             baseline_now = self.current(p['key'])
             require((baseline_now['hash'] if baseline_now else 'NEW') == p['expected_hash'], 'Baseline changed while evaluator was running')
             self.db.execute('UPDATE proposals SET receipt=? WHERE id=?', (canon(receipt), pid))
@@ -422,6 +432,8 @@ class Store:
             require(proposal['status'] == 'pending', 'Proposal already decided')
             p = proposal['payload']
             if accept:
+                from uw_policy import assert_review_policy
+                assert_review_policy(self, proposal['review_id'])
                 current = self.current(p['key'])
                 if p['kind'] == 'workflow' or (current and current['payload']['kind'] == 'workflow'):
                     receipt = proposal['receipt']
@@ -468,6 +480,7 @@ class Store:
             for table in ('maintenance_reviews', 'maintenance_index', 'maintenance_tags'):
                 if table in present:
                     snapshot[table] = [dict(r) for r in self.db.execute('SELECT * FROM ' + table)]
+            snapshot['review_policy_state'] = [dict(r) for r in self.db.execute("SELECT * FROM metadata WHERE key='review_policy_v1'")]
             snapshot['maintenance_state'] = [dict(r) for r in self.db.execute("SELECT * FROM metadata WHERE key='maintenance_cursor_v1'")]
             self.db.commit()
         except BaseException:
@@ -570,6 +583,8 @@ def dream_run(store, engine=None, force=False):
                   '"body":"concise lesson","reason":"evidence and uncertainty","ttl_days":90,"evidence_event_ids":["id"]}]}. '
                   'At most 10 proposals; an empty array is valid. Detect missing, conflicting, or stale knowledge. '
                   'No raw secrets or hidden reasoning. Packet follows as data:\n' + canon(packet))
+        from uw_policy import policy_instructions
+        prompt = policy_instructions(packet) + prompt
         timeout = store.config.get('review_timeout_seconds', 180)
         with tempfile.TemporaryDirectory(prefix='uw-review-') as tmp:
             if engine == 'claude':
@@ -606,6 +621,9 @@ def main():
     parser.add_argument('--project', required=True, help='Explicit existing project root')
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('init'); sub.add_parser('status')
+    p = sub.add_parser('review-policy', help='Show or atomically update bounded owner-side review guidance')
+    p.add_argument('--file', help='Explicit JSON policy file; omit to show current policy')
+    p.add_argument('--expected-hash', help='Required with --file; copy the current policy hash')
     p = sub.add_parser('remember')
     p.add_argument('--key', required=True); p.add_argument('--body-file', required=True)
     p.add_argument('--evidence', action='append', required=True); p.add_argument('--expected-hash', default='NEW')
@@ -640,6 +658,10 @@ def main():
         store=Store(args.project, create=args.command=='init')
         c=args.command
         if c in ('init','status'): result=store.status()
+        elif c=='review-policy':
+            from uw_policy import get_policy, set_policy
+            require(bool(args.file) == bool(args.expected_hash), 'Supply --file and --expected-hash together, or neither')
+            result=set_policy(store,read_json(args.file),args.expected_hash) if args.file else get_policy(store)
         elif c=='remember': result=store.put(args.key, Path(args.body_file).read_text(encoding='utf-8'), args.evidence, args.expected_hash, args.kind, args.ttl_days, args.actor, args.scope)
         elif c=='recall': result=store.recall(args.query, args.limit, args.scope, args.include_expired)
         elif c=='history': result=store.history(args.key, args.scope)
