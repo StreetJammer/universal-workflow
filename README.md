@@ -28,6 +28,7 @@ Universal Workflow coordinates an agent's work from a short request to a verifie
 - **Native memory first:** use the host's everyday memory; add shared project memory only when needed.
 - **Optional portable memory:** project isolation, provenance, expiry, atomic updates, revision history, rollback, and Markdown/JSON export.
 - **Memory maintenance:** review without new events, sweep older memories, and propose versioned merges or retirements.
+- **Optional authenticated sharing:** organization/team/individual namespaces, private scratch, and permission-filtered review context through a loopback service.
 - **Parallel review:** bounded session shards, deterministic evidence aggregation, and explicit conflict reconciliation.
 - **Project review priorities:** versioned topic guidance, bounded context, and stale-policy rejection.
 - **Cross-session review:** a separate “dreaming” worker proposes improvements from recorded outcomes.
@@ -214,8 +215,8 @@ CI runs on Linux, macOS, and Windows. Check the pull request's latest six matrix
 
 ## Boundaries
 
-- This local store is not an authenticated multi-tenant memory service. Use OS/service isolation for untrusted users.
-- Owner policy and permissions remain outside writable memory. Actor labels are audit labels, not authenticated identities.
+- The direct local CLI trusts its filesystem owner. The optional [authenticated service](docs/ACCESS_CONTROL.md) enforces namespace permissions through HTTP and requires a dedicated protected OS account; it is not an Internet-facing or enterprise SSO service.
+- Owner policy and permissions remain outside writable memory. Direct CLI actor labels are audit labels; service actors are bound to authenticated principals.
 - Recall uses lexical matching; it is not a vector index or fleet-scale retrieval system.
 - The package never guarantees correctness, production readiness, or improvements across every task.
 - Native host integration, model output quality, game-engine execution, and browser interaction require verification in the destination environment.
@@ -231,6 +232,7 @@ CI runs on Linux, macOS, and Windows. Check the pull request's latest six matrix
 | Native memory coexistence | [Native memory](skills/universal-workflow/references/native-memory.md) |
 | Transactional project memory | [Memory runtime](skills/universal-workflow/references/memory.md) |
 | Review and evaluation | [Review workflow](skills/universal-workflow/references/review.md) |
+| Authenticated memory sharing | [Access control and service setup](docs/ACCESS_CONTROL.md) |
 | Parallel dreaming | [Concurrent reviewers](docs/PARALLEL_REVIEW.md) |
 | Review priorities | [Project policy](docs/REVIEW_PRIORITIES.md) |
 | Memory maintenance | [Memory-only sweeps](docs/MEMORY_MAINTENANCE.md) |
