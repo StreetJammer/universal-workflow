@@ -2,6 +2,34 @@
 
 Scope: installation, context prompting, optional memory, review proposals, evaluation gates, process control, portability, privacy, and public packaging. The goal is a reviewable preview with explicit evidence, not an unverifiable claim that the repository is perfect.
 
+## Progress — 6 November 2026
+
+The foundation and all five feature follow-ups are merged into `main`. The integrated feature tree is at merge commit `b085dc3`; each feature completed code/security review and its latest six-job CI matrix before merging.
+
+| Deliverable | Merged PR |
+| --- | --- |
+| Foundation, installer integrity and backup security | [#1](https://github.com/StreetJammer/universal-workflow/pull/1) |
+| Sanitized rich session traces | [#4](https://github.com/StreetJammer/universal-workflow/pull/4) |
+| Memory-only maintenance and versioned merge/retire proposals | [#5](https://github.com/StreetJammer/universal-workflow/pull/5) |
+| Project review priorities | [#6](https://github.com/StreetJammer/universal-workflow/pull/6) |
+| Bounded parallel review | [#7](https://github.com/StreetJammer/universal-workflow/pull/7) |
+| Authenticated namespaces, review permissions and cumulative storage limits | [#8](https://github.com/StreetJammer/universal-workflow/pull/8) |
+
+The full local suite completes 184 tests (183 passed and one platform-specific skip). All six Linux/macOS/Windows jobs on Python 3.10/3.12 passed for the final feature revision `7b68ba8` in [CI run 42181591909](https://github.com/StreetJammer/universal-workflow/actions/runs/42181591909). Its tested tree is identical to the merged feature tree. See [validation](VALIDATION.md) for the scope of this evidence.
+
+### Dependency PR check
+
+These are separate CI action updates, not missing product features. Status below is a snapshot of the rebased commits checked on 6 November 2026; later revisions need their own checks.
+
+| PR | Change | Checked head and CI | Recorded review status |
+| --- | --- | --- | --- |
+| [#2](https://github.com/StreetJammer/universal-workflow/pull/2) | `actions/checkout` 4.4.0 → 7.0.1 | `4602db5`; [all six jobs passed](https://github.com/StreetJammer/universal-workflow/actions/runs/42192097415) | Earlier Codex code review is clean on `18b1394`; no code/security review recorded for the rebased head |
+| [#3](https://github.com/StreetJammer/universal-workflow/pull/3) | `actions/setup-python` 5.6.0 → 7.1.0 | `5866f4b`; [all six jobs passed](https://github.com/StreetJammer/universal-workflow/actions/runs/42192249638) | No Codex code/security review recorded |
+
+Both are open, mergeable one-line SHA-pin changes. The pins match the official upstream release tags. Inspection found no required workflow adjustment: `contents: read`, `persist-credentials: false`, the test matrix and commands remain intact. Both actions use Node 24; the existing GitHub-hosted runners passed. [Checkout's new fork-checkout restrictions](https://github.com/actions/checkout/blob/3d3c42e5aac5ba805825da76410c181273ba90b1/README.md) concern `pull_request_target`/`workflow_run`, which this workflow does not use. The [setup-python runtime requirement](https://github.com/actions/setup-python/blob/6d4fd22b20465ccc0f7354476588e8df7c9ca0e0/README.md) is also satisfied by the tested hosted runners. Complete current-revision code/security review before merging under the project's review-first process. No dependency PR was merged during this check.
+
+The remaining release work is native authenticated host smoke testing, an active scheduler if unattended operation is wanted, operator verification of service isolation/ACLs, and meaningful real-task evaluations. MCP support and third-party skill distribution remain optional extensions.
+
 ## Reproduced defects repaired
 
 | Gap | Repair | Regression evidence |
@@ -31,7 +59,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Area | Current boundary | Evidence needed to expand it |
 | --- | --- | --- |
 | Native integrations | Claude/Codex transport mocks and documented formats | Authenticated native CLI installation and real host smoke checks |
-| Operating systems | Local Linux/Python 3.12 run; six hosted jobs passed for merged PR #1 | All six jobs must pass on the latest revision |
+| Operating systems | Local Linux/Python 3.12 run; all six hosted jobs passed for the integrated feature tree | Future revisions require their own latest six jobs; native host checks remain separate |
 | Automatic improvement | Proposal-only review; trusted external evaluator controls workflow promotion | Project-owned tasks and meaningful held-out measures |
 | Multi-user security | Optional authenticated loopback service with enforced namespaces and review ACLs; direct CLI still trusts its owner | Dedicated OS account/ACL deployment, enterprise identity/TLS integration and operational review |
 | Retrieval scale | Lexical retrieval with bounded context | Benchmarks for larger stores and a justified search upgrade |
@@ -41,7 +69,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Non-Git discovery | Explicit host root respected; nearest store fallback without one | Initialize separate project stores or provide the host root |
 | Windows process trees | Immediate worker termination only | Native process-tree supervision and integration checks |
 | Store upgrades | First public schema 1; unpublished development stores rejected | Versioned migration when a released schema changes |
-| Public review | PR #1 merged after completed code/security reviews and passing CI; feature PRs reviewed separately | Completed reviews on each latest feature revision and fixes for reproducible findings |
+| Public review | PR #1 and feature PRs #4–#8 merged after code/security reviews and passing CI | Current-revision reviews for open dependency updates and future changes |
 
 No open reproducible failure remains in the local release suite. Passing those tests does not establish complete coverage of the speech's architecture. The external checks above remain pending and are not represented as passing tests.
 
@@ -49,10 +77,10 @@ No open reproducible failure remains in the local release suite. Passing those t
 
 The [full speech audit](SPEECH_AUDIT.md) identified incomplete features that the original source map did not distinguish clearly enough:
 
-- Completed locally: rich sanitized session-trace ingestion, including tool summaries, skills used, explicit user corrections and source/turn references. See [session traces](SESSION_TRACES.md).
-- Completed locally: memory-only maintenance without new events, eventual key-order sweeps, cross-batch candidates, and versioned merge/retire proposals. See [maintenance](MEMORY_MAINTENANCE.md).
-- Completed locally: configurable include/focus/exclude priorities, deterministic limits, and stale-policy checks for event and maintenance reviews. See [review priorities](REVIEW_PRIORITIES.md).
-- Completed locally: bounded parallel session reviewers, evidence aggregation, global session denominators, and explicit conflict reconciliation. See [parallel review](PARALLEL_REVIEW.md).
-- Completed locally: authenticated organization/team/individual scopes, private scratch, and matching review-input permissions through an optional protected service. See [access control](ACCESS_CONTROL.md).
+- Merged in PR #4: rich sanitized session-trace ingestion, including tool summaries, skills used, explicit user corrections and source/turn references. See [session traces](SESSION_TRACES.md).
+- Merged in PR #5: memory-only maintenance without new events, eventual key-order sweeps, cross-batch candidates, and versioned merge/retire proposals. See [maintenance](MEMORY_MAINTENANCE.md).
+- Merged in PR #6: configurable include/focus/exclude priorities, deterministic limits, and stale-policy checks for event and maintenance reviews. See [review priorities](REVIEW_PRIORITIES.md).
+- Merged in PR #7: bounded parallel session reviewers, evidence aggregation, global session denominators, and explicit conflict reconciliation. See [parallel review](PARALLEL_REVIEW.md).
+- Merged in PR #8: authenticated organization/team/individual scopes, private scratch, and matching review-input permissions through an optional protected service. See [access control](ACCESS_CONTROL.md).
 
-All five changes have dedicated executable tests and separate feature PRs. See [validation](VALIDATION.md) for current test evidence. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
+All five changes have dedicated executable tests and merged feature PRs. See [validation](VALIDATION.md) for current test evidence. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.

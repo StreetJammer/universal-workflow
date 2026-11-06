@@ -38,6 +38,8 @@ Universal Workflow coordinates an agent's work from a short request to a verifie
 
 This is a **preview implementation**. It provides a workflow and local tooling; it does not guarantee that any model can finish any task. Native engine/browser access, independent evaluators, authenticated CLIs, and external scheduling remain environment-specific.
 
+**Progress, 6 November 2026:** the foundation and all five feature follow-ups are merged. The suite contains 184 tests, and the final feature revision passed all six hosted CI jobs and code/security review. See [completed work, open dependency PRs and remaining deployment checks](docs/GAP_ANALYSIS.md#progress--6-november-2026).
+
 ## Requirements
 
 | Component | Requirement |
