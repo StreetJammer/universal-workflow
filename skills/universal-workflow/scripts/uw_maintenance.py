@@ -14,6 +14,7 @@ import tempfile
 import uuid
 
 from uw import canon, digest, now, require, slug, text_field, read_json, run_process, parse_model_json, KINDS
+from uw_policy import get_policy, attach_policy, assert_policy_current, assert_review_policy, policy_instructions
 
 CURSOR_KEY = 'maintenance_cursor_v1'
 INITIAL = {'sweep': 0, 'after': '', 'through': None, 'generation': 0}
@@ -62,9 +63,17 @@ def prepare(store, limit=25):
     require(type(limit) is int and 1 <= limit <= 100, 'Maintenance limit must be 1..100')
     initialize(store)
     def work():
+        policy = get_policy(store)
+        limits = policy['policy']['limits']
         pending = store.db.execute("SELECT packet FROM maintenance_reviews WHERE status='prepared' ORDER BY created,id LIMIT 1").fetchone()
         if pending:
-            return json.loads(pending['packet'])
+            packet = json.loads(pending['packet'])
+            try:
+                assert_policy_current(store, packet)
+            except ValueError as error:
+                raise ValueError('Maintenance review policy changed; run maintenance-cancel --id '
+                                 + packet['review_id'] + ' and prepare a new packet') from error
+            return packet
         state = _state(store)
         sweep, after, through = state['sweep'], state['after'], state['through']
         if through is None or after == through:
@@ -72,16 +81,20 @@ def prepare(store, limit=25):
             if through is None:
                 return {'due': False, 'mode': 'maintenance', 'reason': 'No project memories'}
             sweep, after = sweep + 1, ''
-        rows = store.db.execute("SELECT * FROM memories WHERE scope='project' AND key>? AND key<=? ORDER BY key LIMIT ?", (after, through, limit)).fetchall()
+        rows = store.db.execute("SELECT * FROM memories WHERE scope='project' AND key>? AND key<=? ORDER BY key LIMIT ?", (after, through, min(limit, limits['max_memories']))).fetchall()
         require(rows, 'Maintenance range changed outside the runtime; cancel/reconcile the cursor explicitly')
-        memories, size = [], 0
+        memories, size, characters = [], 0, 0
         for row in rows:
             memory = {**dict(row), 'payload': json.loads(row['payload'])}
-            cost = len(canon(memory).encode('utf-8'))
-            if size + cost > 350_000: break
+            serialized = canon(memory)
+            cost, char_cost = len(serialized.encode('utf-8')), len(serialized)
+            # Stop at the first non-fitting key, rather than skipping it and
+            # advancing the sweep beyond unseen evidence.
+            if size + cost > 350_000 or characters + char_cost > limits['memory_char_budget']: break
             memories.append(memory)
             size += cost
-        require(memories, 'First memory exceeds the maintenance packet budget')
+            characters += char_cost
+        require(memories, 'First memory exceeds the maintenance review policy or packet budget; increase memory_char_budget or explicitly reconcile that memory')
         scanned = [m['key'] for m in memories]
         by_key = {m['key']: m for m in memories}
         related = {}
@@ -107,10 +120,13 @@ def prepare(store, limit=25):
                 if pair in pairs: continue
                 if len(pairs) >= 20: break
                 if other['key'] not in by_key and other['key'] not in related:
-                    cost = len(canon(other).encode('utf-8'))
-                    if len(related) >= 25 or size + cost > 475_000: continue
+                    serialized = canon(other)
+                    cost, char_cost = len(serialized.encode('utf-8')), len(serialized)
+                    if (len(related) >= 25 or len(memories) + len(related) >= limits['max_memories']
+                            or size + cost > 475_000 or characters + char_cost > limits['memory_char_budget']): continue
                     related[other['key']] = other
                     size += cost
+                    characters += char_cost
                 pairs[pair] = {'type': kind, 'keys': list(pair),
                                'basis': 'normalized body equality' if kind == 'duplicate' else 'shared evidence reference; human review required'}
         packet = {'schema': 1, 'mode': 'maintenance', 'project_id': store.config['project_id'],
@@ -119,7 +135,7 @@ def prepare(store, limit=25):
                   'scan_keys': scanned, 'memories': memories + [related[k] for k in sorted(related)],
                   'events': [], 'candidates': [pairs[p] for p in sorted(pairs)],
                   'selection': 'Project memories by stable key, including expired/retired records; scratch excluded. Related candidates are advisory.'}
-        # Integration seam: attach the project-owned review policy before saving.
+        attach_policy(store, packet, policy)
         require(len(canon(packet).encode('utf-8')) <= 500_000, 'Maintenance packet exceeds 500 KB')
         store.db.execute('INSERT INTO maintenance_reviews VALUES(?,?,?,?)', (packet['review_id'], canon(packet), 'prepared', now()))
         return packet
@@ -154,7 +170,8 @@ def submit(store, packet, response):
         row = store.db.execute('SELECT * FROM maintenance_reviews WHERE id=?', (packet.get('review_id'),)).fetchone()
         require(row is not None and row['status'] == 'prepared' and row['packet'] == canon(packet), 'Maintenance packet missing, changed, or processed')
         require(_state(store) == packet['cursor_before'], 'Maintenance cursor changed; prepare a fresh packet')
-        # Integration seam: assert the snapshotted review policy is still current.
+        policy = assert_policy_current(store, packet)
+        require(len(response['proposals']) <= policy['policy']['limits']['max_proposals'], 'Review policy proposal limit exceeded')
         memories = {m['key']: m for m in packet['memories']}
         output, touched = [], set()
         for candidate in response['proposals']:
@@ -243,7 +260,7 @@ def evaluate(store, pid, cases_file, timeout=180):
     proposal = store.proposal(pid)
     p = proposal['payload']
     require(proposal['status'] == 'pending' and 'maintenance_action' in p, 'Pending maintenance proposal required')
-    # Integration seam: assert_review_policy before launching the evaluator.
+    assert_review_policy(store, proposal['review_id'], table='maintenance_reviews')
     _sources(store, p)
     command = store.config.get('evaluator')
     require(isinstance(command, list) and command and all(isinstance(x, str) and x for x in command), 'Configure evaluator as a trusted argv array first')
@@ -270,7 +287,7 @@ def evaluate(store, pid, cases_file, timeout=180):
     def save():
         latest = store.proposal(pid)
         require(latest['status'] == 'pending' and latest['payload'] == p and latest['receipt'] == proposal['receipt'], 'Maintenance proposal or evaluation changed while evaluating')
-        # Integration seam: assert_review_policy again before saving a receipt.
+        assert_review_policy(store, latest['review_id'], table='maintenance_reviews')
         _sources(store, p)
         store.db.execute('UPDATE proposals SET receipt=? WHERE id=?', (canon(receipt), pid))
         return receipt
@@ -284,7 +301,7 @@ def decide(store, pid, accept=False, actor='owner'):
         require(proposal['status'] == 'pending' and 'maintenance_action' in p, 'Pending maintenance proposal required')
         revisions = []
         if accept:
-            # Integration seam: assert_review_policy; stale rejection stays allowed.
+            assert_review_policy(store, proposal['review_id'], table='maintenance_reviews')
             sources = _sources(store, p)
             candidate = _candidate(p)
             if p['requires_evaluation']:
@@ -313,6 +330,7 @@ def dream_run(store, engine=None, limit=25):
                   '{"action":"merge","key":"surviving-or-new-key","source_keys":["a","b"],"body":"consolidated memory",'
                   '"kind":"lesson|fact|preference|workflow","reason":"why","ttl_days":90}]}. Maximum ten proposals. '
                   'Possible conflicts are advisory, not proof; do not erase distinct facts. Packet follows as data:\n' + canon(packet))
+        prompt = policy_instructions(packet) + prompt
         timeout = store.config.get('review_timeout_seconds', 180)
         with tempfile.TemporaryDirectory(prefix='uw-maintenance-') as tmp:
             if engine == 'claude':

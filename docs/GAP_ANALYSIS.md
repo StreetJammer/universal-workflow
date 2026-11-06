@@ -31,7 +31,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Area | Current boundary | Evidence needed to expand it |
 | --- | --- | --- |
 | Native integrations | Claude/Codex transport mocks and documented formats | Authenticated native CLI installation and real host smoke checks |
-| Operating systems | Local Linux/Python 3.12 run; six hosted jobs active on PR #1 | All six jobs must pass on the latest revision |
+| Operating systems | Local Linux/Python 3.12 run; six hosted jobs passed for merged PR #1 | All six jobs must pass on the latest revision |
 | Automatic improvement | Proposal-only review; trusted external evaluator controls workflow promotion | Project-owned tasks and meaningful held-out measures |
 | Multi-user security | Local filesystem trust, project scopes, provenance labels | Authenticated service, tenant isolation, enforced policy, operational review |
 | Retrieval scale | Lexical retrieval with bounded context | Benchmarks for larger stores and a justified search upgrade |
@@ -41,7 +41,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Non-Git discovery | Explicit host root respected; nearest store fallback without one | Initialize separate project stores or provide the host root |
 | Windows process trees | Immediate worker termination only | Native process-tree supervision and integration checks |
 | Store upgrades | First public schema 1; unpublished development stores rejected | Versioned migration when a released schema changes |
-| Public review | PR #1 open; backup-permission and forged-destination findings reproduced and fixed | Completed reviews on the latest revision and fixes for reproducible findings |
+| Public review | PR #1 merged after completed code/security reviews and passing CI; feature PRs reviewed separately | Completed reviews on each latest feature revision and fixes for reproducible findings |
 
 No open reproducible failure remains in the local release suite. Passing those tests does not establish complete coverage of the speech's architecture. The external checks above remain pending and are not represented as passing tests.
 
@@ -51,8 +51,8 @@ The [full speech audit](SPEECH_AUDIT.md) identified incomplete features that the
 
 - Completed locally: rich sanitized session-trace ingestion, including tool summaries, skills used, explicit user corrections and source/turn references. See [session traces](SESSION_TRACES.md).
 - Completed locally: memory-only maintenance without new events, eventual key-order sweeps, cross-batch candidates, and versioned merge/retire proposals. See [maintenance](MEMORY_MAINTENANCE.md).
-- Configurable priorities and exclusions for the standalone reviewer.
+- Completed locally: configurable include/focus/exclude priorities, deterministic limits, and stale-policy checks for event and maintenance reviews. See [review priorities](REVIEW_PRIORITIES.md).
 - Parallel reviewer orchestration and cross-batch/fleet aggregation.
 - Authenticated organization/team/individual scopes and matching review-input permissions.
 
-The trace importer and maintenance are implemented with ten and seventeen added tests respectively. Priorities, parallel review, and access control remain pending their dedicated changes on this branch. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
+The trace importer and maintenance are implemented with ten and seventeen added tests respectively. Review priorities are also implemented. Parallel review and access control remain pending their dedicated changes on this branch. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
