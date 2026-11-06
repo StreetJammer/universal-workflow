@@ -11,10 +11,21 @@ import subprocess
 import sys
 import tempfile
 import threading
+import traceback
 import unittest
 from unittest.mock import patch
 
 import uw_service as service
+
+
+class FixtureHTTPServer(service.ServiceHTTPServer):
+    def __init__(self, *args, **kwargs):
+        self.errors = []
+        super().__init__(*args, **kwargs)
+
+    def handle_error(self, request, client_address):
+        # Synthetic fixtures may expose diagnostics; production stays silent.
+        self.errors.append(traceback.format_exc())
 
 
 class ServiceTests(unittest.TestCase):
@@ -28,7 +39,21 @@ class ServiceTests(unittest.TestCase):
         self.add_user('bob', 'alpha', ['design'])
         self.add_user('charlie', 'alpha', ['finance'], False, ['finance'])
         self.add_user('mallory', 'foreign', ['design'], True, ['design'])
-        self.server = service.ServiceHTTPServer(self.directory, port=0)
+        # Authorization checks use initialized stores. Cold SQLite/schema/fsync
+        # work can exceed the real five-second connection deadline on a loaded
+        # Windows runner; its correctness is checked separately. Initialization
+        # exceptions still fail setup directly, without HTTP error suppression.
+        fixture = service.MemoryService(self.directory)
+        targets = set()
+        for user, principal in service.read_policy(self.directory)['principals'].items():
+            org = principal['org']
+            targets.add(('organization', org))
+            targets.update(('team', org, team) for team in principal['teams'])
+            targets.update((scope, org, user) for scope in ('individual', 'scratch'))
+        for target in sorted(targets):
+            with fixture._store(target):
+                pass
+        self.server = FixtureHTTPServer(self.directory, port=0)
         self.thread = threading.Thread(target=self.server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True)
         self.thread.start()
 
@@ -53,10 +78,15 @@ class ServiceTests(unittest.TestCase):
             headers['Authorization'] = 'Bearer ' + self.tokens[user]
         if extra_headers:
             headers.update(extra_headers)
-        connection.request('POST', f'/v1/{scope}/{action}', json.dumps(payload or {}), headers)
-        response = connection.getresponse()
-        status, data = response.status, json.loads(response.read())
-        connection.close()
+        try:
+            connection.request('POST', f'/v1/{scope}/{action}', json.dumps(payload or {}), headers)
+            response = connection.getresponse()
+            status, data = response.status, json.loads(response.read())
+        except (http.client.HTTPException, OSError) as error:
+            diagnostics = '\n'.join(self.server.errors) or 'No server exception captured; the connection deadline may have expired.'
+            raise AssertionError('HTTP fixture transport failed. ' + diagnostics) from error
+        finally:
+            connection.close()
         return status, data
 
     def ok(self, user, scope, action, payload=None):

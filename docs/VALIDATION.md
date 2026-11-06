@@ -11,7 +11,7 @@ python3 scripts/validate_package.py
 python3 -m unittest discover -s skills/universal-workflow/scripts -p 'test_*.py' -v
 ```
 
-The suite contains **169 deterministic tests**: the 60-test foundation, ten session-trace regressions, twenty-one maintenance regressions, seventeen event-review policy tests, eleven maintenance-policy integration tests, nineteen parallel-review tests, and twenty-one live HTTP service tests, six history-pagination tests, and four policy-capacity tests. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips the POSIX-specific cases explicitly; service ACL deployment still requires native operator verification.
+The suite contains **170 deterministic tests**: the 60-test foundation, ten session-trace regressions, twenty-one maintenance regressions, seventeen event-review policy tests, eleven maintenance-policy integration tests, nineteen parallel-review tests, and twenty-one live HTTP service tests, six history-pagination tests, four policy-capacity tests, and one controlled cold-initialization deadline test. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips the POSIX-specific cases explicitly; service ACL deployment still requires native operator verification.
 
 | Area | Evidence and scope |
 | --- | --- |
@@ -69,3 +69,5 @@ Publish as **0.1.0 preview** with this evidence and the [gap analysis](GAP_ANALY
 Independent service review reproduced administrative policy-size lockout, workflow rollback bypass, and unbounded recall materialization. The service now preflights policy serialization, denies workflow rollback/expiration to HTTP writers, and uses bounded service-only retrieval and quotas. Additional Unicode transport tests preserve both review watermarks when splitting large packets.
 
 Pre-merge review also reproduced credential revocation failing at the exact policy-size cap and oversized histories becoming unreadable. Admission now reserves security-operation capacity, legacy full-size policies compact safely for rotation/revocation, and history supports byte-bounded cursor pagination. Regressions include all 64 revocations at the old cap, revision growth, large Unicode histories and concurrent updates between pages.
+
+A Windows Python 3.10 CI run disconnected three first-use HTTP requests while the other five jobs passed. Authorization fixtures now initialize their real stores before HTTP checks and capture unexpected server errors. A separate controlled cold-initialization test reproduces deadline disconnection and verifies initialization/recovery; production keeps its five-second deadline. Hosted Windows checks must confirm the revised fixture.
