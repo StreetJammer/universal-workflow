@@ -1,0 +1,18 @@
+{
+  "original_request": "Preserve the exact user request here",
+  "objective": "",
+  "deliverables": [],
+  "fixed_constraints": [],
+  "authorized_actions": [],
+  "domain": "general",
+  "available_tools": [],
+  "relevant_sources": [],
+  "selected_skills": [],
+  "assumptions": [],
+  "blocking_unknowns": [],
+  "acceptance_checks": [],
+  "plan": [],
+  "budget": {"max_attempts_per_failing_step": 3},
+  "verification_results": [],
+  "remaining_limitations": []
+}

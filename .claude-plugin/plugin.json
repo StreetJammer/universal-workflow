@@ -1,0 +1,10 @@
+{
+  "name": "universal-workflow",
+  "version": "0.1.0",
+  "author": {
+    "name": "Arun Christudhas"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/StreetJammer/universal-workflow",
+  "description": "Portable task prompting, verified work, project memory, and cross-session review."
+}
