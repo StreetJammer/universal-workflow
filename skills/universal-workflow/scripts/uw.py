@@ -248,7 +248,7 @@ class Store:
             return self._put(key, payload, expected, actor, scope)
         return self.transaction(work)
 
-    def record(self, event):
+    def _event_payload(self, event):
         require(isinstance(event, dict), 'Event must be an object')
         require(event.get('status') in ('success', 'failure', 'blocked', 'unverified', 'observed'), 'Invalid event status')
         session = text_field(event.get('session'), 'session', 200)
@@ -265,17 +265,25 @@ class Store:
             if key in event:
                 require(type(event[key]) in (float, int) and 0 <= event[key] < 1e12, f'Invalid {key}')
                 payload[key] = event[key]
+        if 'trace' in event:
+            from uw_traces import validate_trace
+            payload['trace'] = validate_trace(event['trace'], self.config['project_id'])
         eid = event.get('id') or str(uuid.uuid4())
         require(isinstance(eid, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', eid), 'Invalid event id')
-        def work():
-            old = self.db.execute('SELECT payload FROM events WHERE id=?', (eid,)).fetchone()
-            if old:
-                require(old['payload'] == canon(payload), 'Event ID already has different content')
-                return {'id': eid, 'duplicate': True}
-            seq = self.db.execute('SELECT COALESCE(MAX(seq),0)+1 FROM events').fetchone()[0]
-            self.db.execute('INSERT INTO events VALUES(?,?,?,?)', (eid, seq, canon(payload), now()))
-            return {'id': eid, 'seq': seq}
-        return self.transaction(work)
+        return eid, payload
+
+    def _record_event(self, eid, payload):
+        old = self.db.execute('SELECT payload FROM events WHERE id=?', (eid,)).fetchone()
+        if old:
+            require(old['payload'] == canon(payload), 'Event ID already has different content')
+            return {'id': eid, 'duplicate': True}
+        seq = self.db.execute('SELECT COALESCE(MAX(seq),0)+1 FROM events').fetchone()[0]
+        self.db.execute('INSERT INTO events VALUES(?,?,?,?)', (eid, seq, canon(payload), now()))
+        return {'id': eid, 'seq': seq}
+
+    def record(self, event):
+        eid, payload = self._event_payload(event)
+        return self.transaction(lambda: self._record_event(eid, payload))
 
     def prepare(self, force=False):
         watermark = self.db.execute("SELECT COALESCE(MAX(watermark),0) FROM reviews WHERE status='reviewed'").fetchone()[0]
@@ -597,6 +605,7 @@ def main():
         p.add_argument('--scope', choices=('project','scratch'), default='project'); p.add_argument('--actor', default='owner')
         if action == 'rollback': p.add_argument('--revision', type=int, required=True)
     p = sub.add_parser('record'); p.add_argument('--file', required=True)
+    p = sub.add_parser('trace-import'); p.add_argument('--file', required=True)
     p = sub.add_parser('prompt'); p.add_argument('--task-file', required=True); p.add_argument('--domain', choices=DOMAINS, default='general'); p.add_argument('--out')
     p = sub.add_parser('prepare'); p.add_argument('--out'); p.add_argument('--force', action='store_true')
     p = sub.add_parser('submit'); p.add_argument('--packet', required=True); p.add_argument('--response', required=True)
@@ -619,6 +628,9 @@ def main():
         elif c=='rollback': result=store.rollback(args.key, args.revision, args.expected_hash, args.actor, args.scope)
         elif c=='expire': result=store.expire(args.key, args.expected_hash, args.actor, args.scope)
         elif c=='record': result=store.record(read_json(args.file))
+        elif c=='trace-import':
+            from uw_traces import import_session, load_session
+            result=import_session(store, load_session(args.file))
         elif c=='prompt':
             output=assemble(store, Path(args.task_file).read_text(encoding='utf-8'), args.domain)
             if args.out: atomic(args.out, output)
