@@ -32,6 +32,8 @@ Each invocation launches at most one host CLI process with a timeout of 180 seco
 
 Configuration lives at `.universal-workflow/config.json`: review_engine, review_min_events, review_max_events, review_timeout_seconds, evaluator, and minimum_gain. Changing config does not install a scheduler.
 
+Project-owned priorities use the separate `review-policy` command. Read [review-priorities.md](review-priorities.md) for include/focus/exclude guidance, bounded proposal/context limits, and revision-bound updates. Every packet carries its policy snapshot; changing priorities invalidates its submission, evaluation, and acceptance while leaving rejection available. Topic guidance does not remove evidence from packets or change goals and permissions.
+
 ## Evaluate and promote
 
 Facts and lessons need evidence and review. Prompt/workflow changes additionally need an independently executed evaluator:
@@ -62,4 +64,4 @@ Acceptance checks the memory hash again inside the write transaction. Reject or 
 
 Use a persistent local scheduler, CI runner, or the host's verified scheduling capability. For example, a POSIX cron job can invoke one `dream-run` command daily; Windows Task Scheduler can invoke Python with the same arguments. Configure the actual project path, CLI credentials, PATH, timezone, logs, retention, and single-project account isolation. No schedule is installed by this package. When a user requests activation, install it through the available scheduler and verify its registration; if this host cannot access that machine, provide the concrete command and state the missing connection.
 
-For better cost control, leave model review outside Stop hooks. The event-backed `prepare` and `dream-run` commands require new events, even with `--force`. Use [memory-only maintenance](maintenance.md) for resumable sweeps of older/expired memories and versioned merge/retire proposals without events. Maintenance has its own cursor and cannot consume event-review watermarks. Configure a persistent external scheduler if unattended execution is required. Configurable priorities and parallel reviewers are separate follow-up features.
+For better cost control, leave model review outside Stop hooks. The event-backed `prepare` and `dream-run` commands require new events, even with `--force`. Use [memory-only maintenance](maintenance.md) for resumable sweeps of older/expired memories and versioned merge/retire proposals without events. Maintenance has its own cursor and cannot consume event-review watermarks. [Project review priorities](review-priorities.md) supply versioned guidance and bounded context limits. Configure a persistent external scheduler if unattended execution is required. Parallel reviewers are a separate follow-up feature.

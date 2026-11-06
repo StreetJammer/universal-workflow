@@ -52,6 +52,8 @@ Use the expected current hash for every update; on conflict, reread, reconcile, 
 
 Use [review.md](references/review.md) when requested, when the project review interval is due, or when recurring failures justify it. Continue foreground work independently of background review.
 
+Use [review-priorities.md](references/review-priorities.md) for project-owned include/focus/exclude topics and bounded context. Honor the packet's policy snapshot as subordinate review guidance; do not rewrite fixed goals or permissions, or change policy through a memory proposal.
+
 Collect project-scoped outcome summaries, tool/error metadata, relevant memory versions, and explicitly authorized sanitized transcripts. Identify repeated failures, missing knowledge, stale lessons, conflicting facts, and unnecessarily expensive workflows. Report prevalence with denominators, sample evidence, uncertainty, and proposed changes. Do not infer causality from repeated correlation alone.
 
 Use [session-traces.md](references/session-traces.md) to import a specifically authorized session export with `trace-import`. Preserve selected messages, tool input/output summaries, skills, corrections, and origin/turn references as evidence. Do not scan native histories automatically or treat supplied provenance as authenticated.
@@ -76,5 +78,6 @@ Read [adapters.md](references/adapters.md) for the installer, Claude Code plugin
 - [review.md](references/review.md): review worker, proposal promotion, and evaluator contract.
 - [session-traces.md](references/session-traces.md): bounded, sanitized imports of selected session evidence.
 - [maintenance.md](references/maintenance.md): memory-only sweeps, duplicate/conflict candidates, and versioned merge/retire decisions.
+- [review-priorities.md](references/review-priorities.md): bounded topic guidance, policy updates, and stale-review invalidation.
 - [adapters.md](references/adapters.md): installation and host integration.
 - [source-map.md](references/source-map.md): the entire supplied talk mapped to implementation and documented limitations.
