@@ -30,10 +30,13 @@ SQLite `BEGIN IMMEDIATE` makes comparison, revision insertion, and head update o
 
 ## Outcome records
 
-Write a small JSON file and call `record --file event.json`:
+When a project store is enabled, record material outcomes during the task and verify the write receipts before the final response. The agent performs this step; the user should not have to ask again. `remember` stores reusable knowledge; `record` stores what happened. Saving one does not create the other.
+
+Write a small JSON file in an authorized private evidence directory and call `record --file event.json`:
 
 ```json
 {
+  "id": "task-042-mobile-input-attempt-1",
   "session": "task-042",
   "status": "failure",
   "summary": "Mobile tap continued after pointer cancellation; reproduced in the engine.",
@@ -45,6 +48,10 @@ Write a small JSON file and call `record --file event.json`:
 ```
 
 Optional duration_seconds, tokens, and cost must be measured nonnegative values. Status is success, failure, blocked, unverified, or observed. An observed event is not proof of success. Explicit stable event IDs provide idempotency; reusing an ID with different content is rejected. Do not store hidden reasoning or raw transcript archives. Attach sanitized excerpts only when authorized and useful.
+
+Keep a stable session ID across one task and a separate event ID for each check attempt. For example, record the failed mobile-input check above, then its verified recovery as `task-042-mobile-input-attempt-2` with `status: success` and the new evidence. Never overwrite the failure. For a transport/write retry of the *same event*, reuse both the ID and the exact payload; a successful duplicate receipt confirms that record already exists. If a conflicting payload is rejected, inspect the prior event before deciding whether this is a genuinely different check attempt.
+
+`record` returns the saved `id` and its sequence, or the same `id` with `duplicate: true`. Check the exit status and expected ID before claiming persistence. The CLI validates event structure and duplicate consistency; it does not run the check or verify whether the cited evidence is true. Use actual tool results to write the summary. Once recorded, outcomes are available to a normally due review; review submission alone never adopts a proposal.
 
 ## Portability and backup
 

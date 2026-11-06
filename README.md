@@ -38,7 +38,7 @@ Universal Workflow coordinates an agent's work from a short request to a verifie
 
 This is a **preview implementation**. It provides a workflow and local tooling; it does not guarantee that any model can finish any task. Native engine/browser access, independent evaluators, authenticated CLIs, and external scheduling remain environment-specific.
 
-**Progress, 6 November 2026:** the foundation and all five feature follow-ups are merged. The suite contains 184 tests, and the final feature revision passed all six hosted CI jobs and code/security review. See [completed work, open dependency PRs and remaining deployment checks](docs/GAP_ANALYSIS.md#progress--6-november-2026).
+**Progress, 6 November 2026:** the foundation and all five feature follow-ups are merged. Their final feature revision contained 184 tests and passed all six hosted CI jobs and code/security review. The current suite adds three outcome-closeout tests; see [validation scope](docs/VALIDATION.md) and [completed work and remaining deployment checks](docs/GAP_ANALYSIS.md#progress--6-november-2026).
 
 ## Requirements
 
@@ -83,6 +83,8 @@ Claude Code: /universal-workflow Build and verify the buyer dashboard.
 ```
 
 For a user-wide install, replace `--project ... --wire` with `--user`. Global instruction files are not modified. Existing destinations must match the complete payload: missing or changed files, extra entries (including Python caches), internal symlinks, and Windows reparse points are rejected. Nothing is automatically removed; use a new directory or explicitly reconcile the old copy before reinstalling.
+
+After selecting the skill, give one normal task request. The agent retrieves relevant lessons, performs the work, records material outcomes in an enabled project store, and checks whether a review is due. Separate prompts for saving, recalling, and reviewing are useful installation checks, not required steps for every task. Workflow proposals still need evaluation and acceptance. These instructions guide the active agent; they do not register hooks or start an unattended scheduler.
 
 ### Claude Code plugin
 

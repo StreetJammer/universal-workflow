@@ -11,7 +11,7 @@ python3 scripts/validate_package.py
 python3 -m unittest discover -s skills/universal-workflow/scripts -p 'test_*.py' -v
 ```
 
-The suite contains **184 deterministic tests**: the 60-test foundation, ten session-trace regressions, twenty-one maintenance regressions, seventeen event-review policy tests, eleven maintenance-policy integration tests, nineteen parallel-review tests, and twenty-one live HTTP service tests, six history-pagination tests, four policy-capacity tests, one controlled cold-initialization deadline test, and fourteen cumulative storage quota tests. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips the POSIX-specific cases explicitly; service ACL deployment still requires native operator verification.
+The suite contains **187 deterministic tests**: the 60-test foundation, ten session-trace regressions, twenty-one maintenance regressions, seventeen event-review policy tests, eleven maintenance-policy integration tests, nineteen parallel-review tests, and twenty-one live HTTP service tests, six history-pagination tests, four policy-capacity tests, one controlled cold-initialization deadline test, fourteen cumulative storage quota tests, and three outcome-recording CLI tests. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips the POSIX-specific cases explicitly; service ACL deployment still requires native operator verification.
 
 | Area | Evidence and scope |
 | --- | --- |
@@ -28,9 +28,14 @@ The suite contains **184 deterministic tests**: the 60-test foundation, ten sess
 | Review policy | Bounded guidance, unchanged evidence, policy compare-and-swap, snapshot integrity and invalidation before/during evaluation and acceptance |
 | Memory maintenance | No-event sweeps, cross-batch candidates, resumable cursors, multi-source atomic merges, retirement/restore, stale hashes and workflow evaluation gates |
 | Selected session traces | Rich review-context retention, redaction before DB/WAL persistence, bounded input, project isolation, stable identities, late-conflict batch rollback, subprocess import |
+| Outcome closeout | Real CLI subprocesses preserve successful check evidence, distinct ordered failure/recovery attempts, and idempotent write retries without needing a separate saved lesson |
 | Packaging | Required files, valid JSON, Python 3.10 syntax, local Markdown links, plugin hooks, absence of raw transcript and project database |
 
 The evaluator tests deliberately use controlled pass/fail fixtures to test the gate. They are not evidence that generated prompts improve real tasks. A project owner must supply an independently meaningful evaluator.
+
+The three outcome-closeout tests validate the recording protocol against actual controlled check exit codes. They do not establish that every host model follows the revised closeout instructions or that a workflow proposal deserves promotion. Native host behavior and unattended execution remain separate checks.
+
+Two fresh-agent trials of the revised instructions used ordinary single-task requests in isolated projects with initialized stores. The inspection task recorded its successful verification; the repair task recorded the failing test run and successful recovery as separate ordered events in one session. Both checked normal review eligibility without an additional user prompt, preserved the existing tests and owner note, and left the default five-event threshold in place. These are observed cloud-agent executions, not native desktop hook checks, a baseline comparison, or a passing evaluation receipt for an installed project's pending proposal.
 
 ## Additional task exercises
 
