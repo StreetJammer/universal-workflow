@@ -7,7 +7,7 @@ Original audit: 6 November 2026 against the complete supplied transcript (00:00�
 | Speech gap | Current implementation |
 | --- | --- |
 | Detailed session analysis | Implemented: [selected trace importer](SESSION_TRACES.md), sanitized rich evidence in review packets, atomic/idempotent imports and project checks. Native history-format adapters and measured model gains remain separate. |
-| Memory cleanup | Pending the dedicated maintenance change. |
+| Memory cleanup | Implemented: [resumable memory-only sweeps](MEMORY_MAINTENANCE.md), cross-batch candidates, versioned merge/retire proposals, independent workflow evaluation and conflict checks. |
 | Custom review priorities | Pending the dedicated policy change. |
 | Parallel dreaming | Pending the dedicated orchestration change. |
 | Permission hierarchy | Pending the dedicated access-control change. |
@@ -25,7 +25,7 @@ The existing 48 automated checks verify that implemented behavior. They do not e
 | Priority | Speech reference | Missing or partial capability | What actually exists | Concrete completion criterion |
 | --- | --- | --- | --- | --- |
 | Completed locally | 18:32–18:55; 20:42–20:57; 21:42–21:50 | Rich, sanitized session evidence | `trace-import` preserves selected messages, tool summaries, skills, corrections and provenance in the event stream | Ten regressions cover sanitization, whole-batch rollback, limits, project isolation and review evidence retention |
-| First | 17:37–17:43; 26:07–26:22 | Complete memory maintenance | TTL/manual expiry and add/update proposals; worker needs new events and samples only recent memories | Separate memory-only maintenance, eventual coverage of older memories, duplicate/conflict handling, and versioned merge/retire proposals with conflict checks |
+| Completed locally | 17:37–17:43; 26:07–26:22 | Complete memory maintenance | Independent persistent sweep cursor, cross-batch candidate index, merge/retire proposals and evaluator gates | Seventeen regressions cover older memories, event-free review, concurrency, rollback, source/target conflicts and batch progress |
 | First | 22:04–22:29 | Configurable review priorities | Current-host instructions can steer a review; external worker has a fixed prompt | Project-owned include/exclude priorities supplied as bounded review context without overriding user goals or permissions |
 | Later / scale | 21:56–22:04; 22:35–23:12 | Parallel reviewers and aggregate patterns | One bounded reviewer; evidence counts use only its selected batch | Bounded transcript sharding, independent reviewer results, deterministic evidence deduplication, aggregated denominators, orchestrator reconciliation, and retry limits |
 | Later / multi-user | 11:46–12:41; 28:32–29:47 | Organization/team/agent permissions inherited by reviews | Project/scratch labels and OS trust; no authenticated hierarchy or per-agent scratch isolation | Authoritative identity and ACL checks on every read, write, and review-input selection, with tests that reject cross-user leakage |
@@ -36,7 +36,7 @@ Parallel orchestration and enterprise authorization are explicitly deferred arch
 
 - **Background operation (18:11–18:18; 23:29–24:19):** the worker is executable, but a persistent scheduler and authenticated host must be connected. A cron example is not an active service. Automatic overnight improvement has not been activated.
 - **Filesystem memory (07:09–08:14):** the package uses SQLite plus readable Markdown snapshots. The talk describes a filesystem-shaped live memory surface. Direct Markdown editing and automatic synchronization are not supported; the CLI protects version/concurrency semantics.
-- **Search and complete visibility:** lexical recall scans the local store. Review sees at most 100 recent project memories within its budget; it has no full-store cursor, history-based pattern index, or cross-project search. Bounded event batches progress, but memory selection does not constitute an eventual full sweep.
+- **Search and complete visibility:** lexical recall scans the local store. Event reviews see bounded recent context. The separate maintenance cursor eventually sweeps stable project-memory keys, with indexed candidate comparisons across batches; it does not add cross-project search.
 - **Claimed benefits (13:56–14:29; 24:25–24:43):** latency/token/cost fields exist, but no before/after task benchmark proves accuracy gains or net savings. Those benefits must be measured with actual host runs.
 - **Managed API Q&A (27:12–28:25):** this was a provider-specific recommendation. Reimplementing or depending on that API is not necessary for a provider-neutral tool. Its existence or current behavior cannot be inferred from a historical transcript.
 - **Other work (25:45–26:04):** research, document, and operations profiles are included. They guide the host; they do not supply every renderer, engine, browser, or service integration.

@@ -75,5 +75,6 @@ Read [adapters.md](references/adapters.md) for the installer, Claude Code plugin
 - [native-memory.md](references/native-memory.md): reuse host memory and avoid duplicate or conflicting stores.
 - [review.md](references/review.md): review worker, proposal promotion, and evaluator contract.
 - [session-traces.md](references/session-traces.md): bounded, sanitized imports of selected session evidence.
+- [maintenance.md](references/maintenance.md): memory-only sweeps, duplicate/conflict candidates, and versioned merge/retire decisions.
 - [adapters.md](references/adapters.md): installation and host integration.
 - [source-map.md](references/source-map.md): the entire supplied talk mapped to implementation and documented limitations.

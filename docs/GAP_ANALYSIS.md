@@ -50,9 +50,9 @@ No open reproducible failure remains in the local release suite. Passing those t
 The [full speech audit](SPEECH_AUDIT.md) identified incomplete features that the original source map did not distinguish clearly enough:
 
 - Completed locally: rich sanitized session-trace ingestion, including tool summaries, skills used, explicit user corrections and source/turn references. See [session traces](SESSION_TRACES.md).
-- Memory-only maintenance without new events, eventual coverage of older memories, and versioned merge/retire proposals.
+- Completed locally: memory-only maintenance without new events, eventual key-order sweeps, cross-batch candidates, and versioned merge/retire proposals. See [maintenance](MEMORY_MAINTENANCE.md).
 - Configurable priorities and exclusions for the standalone reviewer.
 - Parallel reviewer orchestration and cross-batch/fleet aggregation.
 - Authenticated organization/team/individual scopes and matching review-input permissions.
 
-The trace importer is implemented and covered by ten added tests. The other features remain pending their dedicated changes on this branch. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
+The trace importer and maintenance are implemented with ten and seventeen added tests respectively. Priorities, parallel review, and access control remain pending their dedicated changes on this branch. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
