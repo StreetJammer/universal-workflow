@@ -56,7 +56,8 @@ All actions validate a strict request shape. Add `namespace` only where allowed 
 | --- | --- |
 | `status` | None; returns bounded counts, version, and project ID without filesystem paths |
 | `recall` | Optional `query`, `limit` (1–20), `include_inherited` (default true) |
-| `current`, `history` | `key`; history returns at most 200 latest revisions |
+| `current` | `key` |
+| `history` | `key`; optional integer `limit` (1–200, default 200) and integer `cursor` (1–9223372036854775807, exclusive revision boundary) |
 | `remember` | `key`, `body`, `evidence`; optional `expected_hash`, `kind`, `ttl_days` |
 | `record` | `event` containing the normal bounded outcome fields; session/event IDs are bound to the authenticated principal |
 | `expire` | `key`, `expected_hash`; workflow memories require local owner administration |
@@ -67,6 +68,8 @@ All actions validate a strict request shape. Add `namespace` only where allowed 
 | `proposals` | None; up to 100 visible pending proposals from a bounded scan |
 | `proposal-get` | `id` |
 | `proposal-decide` | `id`, boolean `accept` |
+
+History retains its existing `{"result": [...]}` list response, ordered by newest revision first. Each page contains at most `limit` entries and 1 MB of serialized response JSON, including Unicode escaping. To read the next page, send the last returned entry's `revision` as `cursor`; only lower revisions are returned. Continue until the result is an empty list. A page shorter than `limit` can still have older entries because of the byte limit. New revisions written between requests do not change the remaining older pages. Cursors select revisions only within the authenticated namespace and requested key; they do not grant access to other histories.
 
 For example, an authenticated team writer can send this JSON to `/v1/team/remember`:
 
@@ -111,3 +114,5 @@ Generated policy, credentials, namespace stores, and review data are private dep
 `test_service.py` uses a real loopback HTTP server and multiple independent bearer credentials. It tests unauthenticated/forged claims, cross-organization/team/user/scratch isolation, inherited read versus write access, review-input filtering, foreign packet/proposal access, membership revocation, token rotation/revocation without restart, owner-policy revision and size guards, bounded routes and scans, quota enforcement on accepted proposals, Unicode review batching, workflow rollback/expiration rejection, body/rate limits, and private state permissions. Workflow gate tests use a local fixture evaluator; tests call no model providers.
 
 This release deliberately omits HTTP trace import, maintenance/parallel-worker execution, evaluator execution, policy editing, and raw export/backup routes. Those operations remain owner-controlled local tools until a scoped service adapter is added and tested. The service is an enforceable local authenticated interface; it does not establish enterprise deployment security or protect against its own OS account.
+
+Provisioning and membership updates reserve 320 bytes below the 128,000-byte policy cap for revocation and revision growth. Rotation and revocation can use that reserve; older full-size policies are compacted when necessary without changing grants or relaxing the hard cap.

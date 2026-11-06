@@ -25,8 +25,15 @@ import uw
 
 MAX_BODY = 1_000_000
 MAX_RESPONSE = 2_000_000
+MAX_HISTORY_PAGE_BYTES = 1_000_000
+MAX_HISTORY_PAGE_ITEMS = 200
+MAX_HISTORY_CURSOR = (1 << 63) - 1
 MAX_PRINCIPALS = 64
 MAX_POLICY_BYTES = 128_000
+# Admission must leave room to disable every principal (false adds one byte)
+# and grow the revision by another 256 decimal digits. Security operations can
+# use that reserve; they never relax the hard on-disk/read limit.
+POLICY_SECURITY_RESERVE = MAX_PRINCIPALS + 256
 MAX_NAMESPACE_MEMORIES = 1000
 MAX_RECALL_SCAN = 1000
 MAX_MEMORY_BYTES = 128_000
@@ -112,10 +119,16 @@ def read_policy(directory):
     return _validate_policy(json.loads(path.read_text(encoding='utf-8')))
 
 
-def write_policy(directory, policy):
+def write_policy(directory, policy, *, security_update=False):
     _validate_policy(policy)
     serialized = json.dumps(policy, indent=2) + '\n'
-    if len(serialized.encode('utf-8')) > MAX_POLICY_BYTES:
+    limit = MAX_POLICY_BYTES if security_update else MAX_POLICY_BYTES - POLICY_SECURITY_RESERVE
+    if security_update and len(serialized.encode('utf-8')) > limit:
+        # The prior supported writer admitted pretty JSON right up to the hard
+        # cap. Reclaim its whitespace during rotation/revocation so those valid
+        # legacy policies remain administrable without dropping any grants.
+        serialized = json.dumps(policy, separators=(',', ':')) + '\n'
+    if len(serialized.encode('utf-8')) > limit:
         raise ValueError('Policy exceeds its size limit; existing policy was preserved')
     uw.atomic(directory / 'policy.json', serialized)
 
@@ -185,7 +198,7 @@ def administer(directory, action, user, *, org=None, teams=(), org_writer=False,
             else:
                 raise ValueError('Unknown administrative action')
         policy['revision'] += 1
-        write_policy(directory, policy)
+        write_policy(directory, policy, security_update=action in ('rotate', 'revoke'))
         output = {'user': user, 'revision': policy['revision'], 'action': action}
         if token is not None:
             output['token'] = token  # Returned only by explicit local administration.
@@ -433,13 +446,39 @@ class MemoryService:
                     with self._store(ancestor) as parent:
                         results += [{'namespace': list(ancestor), 'memory': item} for item in parent.recall(query, remaining)]
             return results
-        if action in ('current', 'history'):
+        if action == 'current':
             fields(data, ('key',))
-            key = uw.slug(data['key'])
-            if action == 'current':
-                return store.current(key)
-            rows = store.db.execute('SELECT * FROM history WHERE scope=? AND key=? ORDER BY revision DESC LIMIT 200', ('project', key))
-            return [{**dict(row), 'payload': json.loads(row['payload'])} for row in rows]
+            return store.current(uw.slug(data['key']))
+        if action == 'history':
+            fields(data, ('key',), ('limit', 'cursor'))
+            key, limit = uw.slug(data['key']), data.get('limit', MAX_HISTORY_PAGE_ITEMS)
+            if type(limit) is not int or not 1 <= limit <= MAX_HISTORY_PAGE_ITEMS:
+                raise ValueError('Invalid history limit')
+            cursor = data.get('cursor')
+            if 'cursor' in data and (type(cursor) is not int or not 1 <= cursor <= MAX_HISTORY_CURSOR):
+                raise ValueError('Invalid history cursor')
+            query = 'SELECT * FROM history WHERE scope=? AND key=?'
+            parameters = ['project', key]
+            if cursor is not None:
+                query += ' AND revision<?'
+                parameters.append(cursor)
+            rows = store.db.execute(query + ' ORDER BY revision DESC LIMIT ?', (*parameters, limit))
+            result, size = [], len(b'{"result":[]}')
+            budget = min(MAX_HISTORY_PAGE_BYTES, MAX_RESPONSE)
+            for row in rows:
+                item = {**dict(row), 'payload': json.loads(row['payload'])}
+                # Match Handler._send's escaped JSON, including envelope and commas.
+                item_size = len(json.dumps(item, ensure_ascii=True, separators=(',', ':')).encode('ascii'))
+                next_size = size + item_size + bool(result)
+                if next_size > budget:
+                    if not result:
+                        raise ServiceError(413, 'History revision exceeds the service response limit')
+                    break
+                result.append(item)
+                size = next_size
+            # Keep the original list response. The last revision is the exclusive
+            # cursor for the next page; an empty page marks the end of history.
+            return result
         if action == 'remember':
             fields(data, ('key', 'body', 'evidence'), ('expected_hash', 'kind', 'ttl_days'))
             return store.put(data['key'], data['body'], data['evidence'], data.get('expected_hash', 'NEW'),
