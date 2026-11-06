@@ -28,6 +28,7 @@ Universal Workflow coordinates an agent's work from a short request to a verifie
 - **Native memory first:** use the host's everyday memory; add shared project memory only when needed.
 - **Optional portable memory:** project isolation, provenance, expiry, atomic updates, revision history, rollback, and Markdown/JSON export.
 - **Memory maintenance:** review without new events, sweep older memories, and propose versioned merges or retirements.
+- **Parallel review:** bounded session shards, deterministic evidence aggregation, and explicit conflict reconciliation.
 - **Project review priorities:** versioned topic guidance, bounded context, and stale-policy rejection.
 - **Cross-session review:** a separate “dreaming” worker proposes improvements from recorded outcomes.
 - **Selected session evidence:** import sanitized messages, tool summaries, skills used, and corrections with bounded, atomic `trace-import` batches.
@@ -230,6 +231,7 @@ CI runs on Linux, macOS, and Windows. Check the pull request's latest six matrix
 | Native memory coexistence | [Native memory](skills/universal-workflow/references/native-memory.md) |
 | Transactional project memory | [Memory runtime](skills/universal-workflow/references/memory.md) |
 | Review and evaluation | [Review workflow](skills/universal-workflow/references/review.md) |
+| Parallel dreaming | [Concurrent reviewers](docs/PARALLEL_REVIEW.md) |
 | Review priorities | [Project policy](docs/REVIEW_PRIORITIES.md) |
 | Memory maintenance | [Memory-only sweeps](docs/MEMORY_MAINTENANCE.md) |
 | Selected session imports | [Session traces](docs/SESSION_TRACES.md) |

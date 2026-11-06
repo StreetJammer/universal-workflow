@@ -52,7 +52,7 @@ The [full speech audit](SPEECH_AUDIT.md) identified incomplete features that the
 - Completed locally: rich sanitized session-trace ingestion, including tool summaries, skills used, explicit user corrections and source/turn references. See [session traces](SESSION_TRACES.md).
 - Completed locally: memory-only maintenance without new events, eventual key-order sweeps, cross-batch candidates, and versioned merge/retire proposals. See [maintenance](MEMORY_MAINTENANCE.md).
 - Completed locally: configurable include/focus/exclude priorities, deterministic limits, and stale-policy checks for event and maintenance reviews. See [review priorities](REVIEW_PRIORITIES.md).
-- Parallel reviewer orchestration and cross-batch/fleet aggregation.
+- Completed locally: bounded parallel session reviewers, evidence aggregation, global session denominators, and explicit conflict reconciliation. See [parallel review](PARALLEL_REVIEW.md).
 - Authenticated organization/team/individual scopes and matching review-input permissions.
 
-The trace importer and maintenance are implemented with ten and seventeen added tests respectively. Review priorities are also implemented. Parallel review and access control remain pending their dedicated changes on this branch. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
+The trace importer and maintenance are implemented with ten and seventeen added tests respectively. Review priorities are also implemented. Parallel review is implemented; access control remains pending its dedicated change on this branch. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
