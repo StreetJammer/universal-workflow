@@ -54,6 +54,8 @@ Use [review.md](references/review.md) when requested, when the project review in
 
 Collect project-scoped outcome summaries, tool/error metadata, relevant memory versions, and explicitly authorized sanitized transcripts. Identify repeated failures, missing knowledge, stale lessons, conflicting facts, and unnecessarily expensive workflows. Report prevalence with denominators, sample evidence, uncertainty, and proposed changes. Do not infer causality from repeated correlation alone.
 
+Use [session-traces.md](references/session-traces.md) to import a specifically authorized session export with `trace-import`. Preserve selected messages, tool input/output summaries, skills, corrections, and origin/turn references as evidence. Do not scan native histories automatically or treat supplied provenance as authenticated.
+
 Use the host model to produce the proposal format in `assets/review-response.schema.json`, or use the bounded `dream-run` CLI adapter after a host engine is explicitly configured. Never fabricate model results if an executable or login is missing. The runner produces proposals only. Review and promote useful lessons through `decide`; evaluate workflow/prompt changes first using an independent configured evaluator and held-out cases. Require no regressions on fixed constraints and preserve rollback.
 
 ## 6. Adapt and automate honestly
@@ -72,5 +74,6 @@ Read [adapters.md](references/adapters.md) for the installer, Claude Code plugin
 - [memory.md](references/memory.md): transactions, isolation, provenance, retention, and portability.
 - [native-memory.md](references/native-memory.md): reuse host memory and avoid duplicate or conflicting stores.
 - [review.md](references/review.md): review worker, proposal promotion, and evaluator contract.
+- [session-traces.md](references/session-traces.md): bounded, sanitized imports of selected session evidence.
 - [adapters.md](references/adapters.md): installation and host integration.
 - [source-map.md](references/source-map.md): the entire supplied talk mapped to implementation and documented limitations.

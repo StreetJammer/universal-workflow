@@ -1,6 +1,16 @@
 # Speech-to-implementation audit
 
-Checked 6 November 2026 against the complete supplied transcript (00:00–30:57), the source code, proposal schema, installer/hooks, and release documentation. Source code base: `79c0037`; this audit changes documentation only.
+Original audit: 6 November 2026 against the complete supplied transcript (00:00–30:57), using baseline `79c0037`. The completion table is updated as executable features are implemented; the original probes below are historical evidence, not claims about the current branch.
+
+## Feature completion
+
+| Speech gap | Current implementation |
+| --- | --- |
+| Detailed session analysis | Implemented: [selected trace importer](SESSION_TRACES.md), sanitized rich evidence in review packets, atomic/idempotent imports and project checks. Native history-format adapters and measured model gains remain separate. |
+| Memory cleanup | Pending the dedicated maintenance change. |
+| Custom review priorities | Pending the dedicated policy change. |
+| Parallel dreaming | Pending the dedicated orchestration change. |
+| Permission hierarchy | Pending the dedicated access-control change. |
 
 **Finding: the core local memory workflow is implemented, but the speech's complete production dreaming system is not.** The earlier source map covered all concepts without clearly distinguishing code, host instructions, and deferred architecture. That distinction is now explicit in the [revised source map](../skills/universal-workflow/references/source-map.md).
 
@@ -14,7 +24,7 @@ The existing 48 automated checks verify that implemented behavior. They do not e
 
 | Priority | Speech reference | Missing or partial capability | What actually exists | Concrete completion criterion |
 | --- | --- | --- | --- | --- |
-| First | 18:32–18:55; 20:42–20:57; 21:42–21:50 | Rich, sanitized session evidence | Compact outcome summaries, evidence strings, tool/error labels; no transcript importer or dedicated tool-input/output, skills-used, correction schema | Import explicitly selected authorized traces into bounded records with origin/turn references, sanitization, and project-scope checks; verify that useful diagnostic context survives |
+| Completed locally | 18:32–18:55; 20:42–20:57; 21:42–21:50 | Rich, sanitized session evidence | `trace-import` preserves selected messages, tool summaries, skills, corrections and provenance in the event stream | Ten regressions cover sanitization, whole-batch rollback, limits, project isolation and review evidence retention |
 | First | 17:37–17:43; 26:07–26:22 | Complete memory maintenance | TTL/manual expiry and add/update proposals; worker needs new events and samples only recent memories | Separate memory-only maintenance, eventual coverage of older memories, duplicate/conflict handling, and versioned merge/retire proposals with conflict checks |
 | First | 22:04–22:29 | Configurable review priorities | Current-host instructions can steer a review; external worker has a fixed prompt | Project-owned include/exclude priorities supplied as bounded review context without overriding user goals or permissions |
 | Later / scale | 21:56–22:04; 22:35–23:12 | Parallel reviewers and aggregate patterns | One bounded reviewer; evidence counts use only its selected batch | Bounded transcript sharding, independent reviewer results, deterministic evidence deduplication, aggregated denominators, orchestrator reconciliation, and retry limits |
@@ -31,7 +41,7 @@ Parallel orchestration and enterprise authorization are explicitly deferred arch
 - **Managed API Q&A (27:12–28:25):** this was a provider-specific recommendation. Reimplementing or depending on that API is not necessary for a provider-neutral tool. Its existence or current behavior cannot be inferred from a historical transcript.
 - **Other work (25:45–26:04):** research, document, and operations profiles are included. They guide the host; they do not supply every renderer, engine, browser, or service integration.
 
-## Targeted executable probes
+## Original baseline probes
 
 These used a disposable project and the current runtime; no live model, account, or user project was used.
 
@@ -46,4 +56,4 @@ These used a disposable project and the current runtime; no live model, account,
 - Added the missing feature backlog to the release gap analysis and linked this audit from the README.
 - Kept implementation and test claims unchanged. No new capability is claimed merely because it appears in this report.
 
-Publication as a clearly limited **0.1.0 preview** remains reasonable. Describing it as a complete implementation of the entire speech, or as fully automatic continual learning, would be inaccurate. Repository/PR publication and `@codex review` still require the previously blocked GitHub access step.
+PR #1's **0.1.0 preview** foundation is merged. The feature changes above extend it through separate review PRs. Native host behavior, active scheduling, and real-task learning gains require independent deployment/evaluation evidence.

@@ -49,10 +49,10 @@ No open reproducible failure remains in the local release suite. Passing those t
 
 The [full speech audit](SPEECH_AUDIT.md) identified incomplete features that the original source map did not distinguish clearly enough:
 
-- Rich sanitized session-trace ingestion, including tool input/output, skills used, and explicit user corrections.
+- Completed locally: rich sanitized session-trace ingestion, including tool summaries, skills used, explicit user corrections and source/turn references. See [session traces](SESSION_TRACES.md).
 - Memory-only maintenance without new events, eventual coverage of older memories, and versioned merge/retire proposals.
 - Configurable priorities and exclusions for the standalone reviewer.
 - Parallel reviewer orchestration and cross-batch/fleet aggregation.
 - Authenticated organization/team/individual scopes and matching review-input permissions.
 
-The first three are the highest-value local feature backlog; the last two remain scale-dependent architectural work. These are not implemented by the current 60-test suite. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
+The trace importer is implemented and covered by ten added tests. The other features remain pending their dedicated changes on this branch. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
