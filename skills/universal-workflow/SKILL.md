@@ -60,6 +60,8 @@ Use [session-traces.md](references/session-traces.md) to import a specifically a
 
 Use the host model to produce the proposal format in `assets/review-response.schema.json`, or use the bounded `dream-run` CLI adapter after a host engine is explicitly configured. Never fabricate model results if an executable or login is missing. The runner produces proposals only. Review and promote useful lessons through `decide`; evaluate workflow/prompt changes first using an independent configured evaluator and held-out cases. Require no regressions on fixed constraints and preserve rollback.
 
+For independent session reviewers, follow [parallel-review.md](references/parallel-review.md). Keep evidence within its assigned shard, preserve the prepared policy, and reconcile conflicting candidates explicitly before submitting any proposals.
+
 ## 6. Adapt and automate honestly
 
 Read [adapters.md](references/adapters.md) for the installer, Claude Code plugin export, Codex project wiring, other-host integration, and background execution. Use `scripts/install.py` to install a portable copy. Installation preserves unrelated instructions/settings and refuses to replace a different existing skill.
@@ -79,5 +81,6 @@ Read [adapters.md](references/adapters.md) for the installer, Claude Code plugin
 - [session-traces.md](references/session-traces.md): bounded, sanitized imports of selected session evidence.
 - [maintenance.md](references/maintenance.md): memory-only sweeps, duplicate/conflict candidates, and versioned merge/retire decisions.
 - [review-priorities.md](references/review-priorities.md): bounded topic guidance, policy updates, and stale-review invalidation.
+- [parallel-review.md](references/parallel-review.md): bounded concurrent reviewers, evidence aggregation, and explicit reconciliation.
 - [adapters.md](references/adapters.md): installation and host integration.
 - [source-map.md](references/source-map.md): the entire supplied talk mapped to implementation and documented limitations.

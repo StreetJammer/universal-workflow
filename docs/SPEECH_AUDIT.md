@@ -9,7 +9,7 @@ Original audit: 6 November 2026 against the complete supplied transcript (00:00�
 | Detailed session analysis | Implemented: [selected trace importer](SESSION_TRACES.md), sanitized rich evidence in review packets, atomic/idempotent imports and project checks. Native history-format adapters and measured model gains remain separate. |
 | Memory cleanup | Implemented: [resumable memory-only sweeps](MEMORY_MAINTENANCE.md), cross-batch candidates, versioned merge/retire proposals, independent workflow evaluation and conflict checks. |
 | Custom review priorities | Implemented: [versioned project guidance](REVIEW_PRIORITIES.md), bounded proposal/context limits and stale-policy checks across event and maintenance reviews. |
-| Parallel dreaming | Pending the dedicated orchestration change. |
+| Parallel dreaming | Implemented: [bounded session sharding](PARALLEL_REVIEW.md), isolated reviewer calls, deterministic evidence aggregation, conflict reconciliation and one shared deadline. |
 | Permission hierarchy | Pending the dedicated access-control change. |
 
 **Finding: the core local memory workflow is implemented, but the speech's complete production dreaming system is not.** The earlier source map covered all concepts without clearly distinguishing code, host instructions, and deferred architecture. That distinction is now explicit in the [revised source map](../skills/universal-workflow/references/source-map.md).
@@ -27,10 +27,10 @@ The original baseline contained 48 automated checks; the expanded current suite 
 | Completed locally | 18:32–18:55; 20:42–20:57; 21:42–21:50 | Rich, sanitized session evidence | `trace-import` preserves selected messages, tool summaries, skills, corrections and provenance in the event stream | Ten regressions cover sanitization, whole-batch rollback, limits, project isolation and review evidence retention |
 | Completed locally | 17:37–17:43; 26:07–26:22 | Complete memory maintenance | Independent persistent sweep cursor, cross-batch candidate index, merge/retire proposals and evaluator gates | Seventeen regressions cover older memories, event-free review, concurrency, rollback, source/target conflicts and batch progress |
 | Completed locally | 22:04–22:29 | Configurable review priorities | Versioned include/focus/exclude guidance and deterministic context/proposal limits | Policy snapshots, concurrent updates and stale submit/evaluation/acceptance regressions; guidance cannot grant permissions |
-| Later / scale | 21:56–22:04; 22:35–23:12 | Parallel reviewers and aggregate patterns | One bounded reviewer; evidence counts use only its selected batch | Bounded transcript sharding, independent reviewer results, deterministic evidence deduplication, aggregated denominators, orchestrator reconciliation, and retry limits |
+| Completed locally | 21:56–22:04; 22:35–23:12 | Parallel reviewers and aggregate patterns | Session-disjoint shards, deterministic deduplication, full-packet denominators, bounded concurrent workers and retries | Subprocess concurrency, shard isolation, cancellation/deadline, conflict and stale-policy integration regressions |
 | Later / multi-user | 11:46–12:41; 28:32–29:47 | Organization/team/agent permissions inherited by reviews | Project/scratch labels and OS trust; no authenticated hierarchy or per-agent scratch isolation | Authoritative identity and ACL checks on every read, write, and review-input selection, with tests that reject cross-user leakage |
 
-Parallel orchestration and enterprise authorization are explicitly deferred architecture, not hidden completed features. The first three gaps now have executable implementations with dedicated regressions.
+The first four gaps now have executable implementations with dedicated regressions. Authenticated scope hierarchy is the remaining feature change; enterprise deployment remains a separate operational concern.
 
 ## Operational and design differences
 
