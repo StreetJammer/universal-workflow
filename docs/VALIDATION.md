@@ -11,7 +11,7 @@ python3 scripts/validate_package.py
 python3 -m unittest discover -s skills/universal-workflow/scripts -p 'test_*.py' -v
 ```
 
-The local release suite contains **53 deterministic tests**: 25 runtime/integration tests, 17 concurrency and failure regressions, and 11 packaging/hook regressions. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Windows skips five POSIX-specific cases explicitly.
+The local release suite contains **60 deterministic tests**: 25 runtime/integration tests, 17 concurrency and failure regressions, and 18 packaging/hook regressions. The authoring environment is Linux with Python 3.12.14. Tests use temporary projects and do not contact model providers or alter live projects. Linux/macOS skip one Windows-only junction test; Windows skips seven POSIX-specific cases explicitly.
 
 | Area | Evidence and scope |
 | --- | --- |
@@ -22,7 +22,7 @@ The local release suite contains **53 deterministic tests**: 25 runtime/integrat
 | Worker failure | Timeout, nonzero exit, lease exclusion, interruption cleanup on POSIX, fake Claude/Codex executable transport |
 | Bounded data | 50 large Unicode events are processed across bounded packets without skipped or duplicated sequences |
 | Hooks | Context output shape, no raw response capture, turn-ID deduplication, old-host fallback, nested repository/worktree and explicit non-Git project isolation, malformed location rejection, bounded lock contention |
-| Installation | Both-host conflict preflight, custom content preservation, CRLF/mode preservation, AGENTS import, repeat idempotence, plugin/generic license inclusion |
+| Installation | Both-host conflict preflight, forged module rejection, full entry-set/type validation, internal symlink/junction rejection, FIFO rejection without opening it, custom content preservation, CRLF/mode preservation, AGENTS import, repeat idempotence, plugin/generic license inclusion |
 | Packaging | Required files, valid JSON, Python 3.10 syntax, local Markdown links, plugin hooks, absence of raw transcript and project database |
 
 The evaluator tests deliberately use controlled pass/fail fixtures to test the gate. They are not evidence that generated prompts improve real tasks. A project owner must supply an independently meaningful evaluator.
@@ -48,12 +48,14 @@ Separate offline runtime and packaging audits reproduced issues, then checked re
 | Windows privileged symlink creation | Symlink regressions are POSIX-only; no false pass reported |
 | Game engine, browser, render, or deployment integrations | Delegated to destination tools; not exercised by these runtime tests |
 | Unattended execution | Scheduler recipe supplied; no schedule activated by the package |
-| `@codex review` on the public PR | Initial code review found backup permissions; reproduced and repaired. Follow PR #1 for the latest code/security review state. |
+| `@codex review` on the public PR | Code review found backup permissions; security review found forged installation destinations. Both reproduced and repaired with regressions. Follow PR #1 for the latest review state. |
 
 ## Release decision
 
 The first hosted run exposed a Windows delete-pending directory race during initialization and an unclosed SQLite connection in the backup test. Both are repaired in this PR. Three added regressions exercise transient retry, bounded persistent denial, and propagation of unrelated permission errors; the hosted Windows jobs provide native confirmation.
 
 Codex also identified backups created as `0644` under a typical POSIX umask, although the source was `0600`. Backups now reserve the destination atomically with `0600` permissions before SQLite opens it. Tests check the initial permissions and preservation of a concurrently created destination.
+
+The security review reproduced an accepted destination containing an extra `scripts/json.py` that executes during the runtime's import. A harmless marker confirmed the original behavior. Existing destinations now undergo complete entry-set and type validation without following internal links. Seven new regression tests cover injected modules, bytecode/caches, hidden files, extra directories, linked files/directories, Windows junctions, missing or swapped entries, special files, plugin exports, and rejection before either host is installed.
 
 Publish as **0.1.0 preview** with this evidence and the [gap analysis](GAP_ANALYSIS.md). Require hosted CI and review findings to be resolved before merging the implementation PR. Keep live host checks visible; do not upgrade compatibility claims merely because mocks pass.

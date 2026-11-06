@@ -23,7 +23,7 @@ python3 "$SKILL_DIR/scripts/install.py" --target claude --user
 
 These target `~/.agents/skills` and `~/.claude/skills` respectively. Global instructions are not changed. Prefer project installation for controlled adoption. Do not install both a Claude skill and its plugin version in the same project unless intentional duplication is acceptable.
 
-The installer is idempotent for identical content and refuses to overwrite differing files. For upgrades, install to a new directory or explicitly reconcile the old version. It does not silently erase customized copies. `--wire` only appends project instruction blocks, not hooks/settings or permission changes. Removal means removing the installed skill directory and its clearly marked instruction block; preserve project memory if it is still needed.
+The installer is idempotent only for an exact payload tree: every expected file must be a regular file with identical bytes, and only its required directories may exist. Extra entries (including Python caches), missing or changed files, special files, internal symlinks, and Windows reparse points are rejected without deleting anything. Both-host installation checks both destinations before making changes. For upgrades or runtime-generated caches, use a fresh directory or explicitly reconcile the existing copy; do not assume unexpected files are safe to run. `--wire` only appends project instruction blocks, not hooks/settings or permission changes. Removal means removing the installed skill directory and its clearly marked instruction block; preserve project memory if it is still needed.
 
 ## Claude Code plugin
 

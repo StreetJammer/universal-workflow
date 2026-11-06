@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
 import time
@@ -157,6 +158,110 @@ class PackagingTests(unittest.TestCase):
         response=self.installer('--target','codex','--project',str(self.project),'--wire')
         self.assertEqual(response.returncode, 2)
         self.assertFalse((self.project/'.agents').exists())
+
+    def test_existing_tree_rejects_every_unexpected_entry(self):
+        files=install.payload()
+        cases=(('scripts/json.py',False),('scripts/json.pyc',False),('.hidden',False),
+               ('scripts/__pycache__/json.pyc',False),('scripts/extra',True))
+        for number,(rel,directory) in enumerate(cases):
+            with self.subTest(entry=rel):
+                dest=self.root/f'extra-{number}'
+                install.install_tree(dest,files)
+                entry=dest/rel
+                entry.parent.mkdir(parents=True,exist_ok=True)
+                if directory: entry.mkdir()
+                else: entry.write_bytes(b'unexpected content')
+                with self.assertRaisesRegex(ValueError,'Unexpected entry'):
+                    install.install_tree(dest,files)
+                self.assertTrue(entry.exists(),'Rejected content must not be removed automatically')
+
+    def test_forged_module_rejected_before_installing_either_host(self):
+        dest=self.project/'.claude/skills/universal-workflow'
+        install.install_tree(dest,install.payload())
+        marker=self.root/'injected-module-marker'
+        module=dest/'scripts/json.py'
+        module.write_text('from pathlib import Path\nPath('+repr(str(marker))+').write_text("harmless regression marker")\n'
+                          'raise RuntimeError("injected module executed")\n',encoding='utf-8')
+        response=self.installer('--target','both','--project',str(self.project),'--wire')
+        if response.returncode==0:
+            subprocess.run([sys.executable,str(dest/'scripts/uw.py'),'--help'],capture_output=True,timeout=5)
+        self.assertFalse(marker.exists(),'Installer accepted a tree that executes the injected module')
+        self.assertEqual(response.returncode,2,response.stdout)
+        self.assertFalse(json.loads(response.stderr)['partial'])
+        self.assertFalse((self.project/'.agents').exists())
+        self.assertFalse((self.project/'AGENTS.md').exists())
+        self.assertFalse((self.project/'CLAUDE.md').exists())
+        self.assertTrue(module.is_file())
+
+    def test_plugin_export_rejects_extra_module(self):
+        dest=self.root/'forged-plugin'
+        files=install.plugin_payload(install.payload())
+        install.install_tree(dest,files)
+        (dest/'skills/universal-workflow/scripts/json.py').write_text('unexpected module')
+        response=self.installer('--target','plugin','--output',str(dest))
+        self.assertEqual(response.returncode,2,response.stdout)
+        self.assertFalse(json.loads(response.stderr)['partial'])
+
+    @unittest.skipUnless(os.name=='posix','Symlink creation needs separate Windows privileges')
+    def test_internal_symlinks_rejected_even_with_identical_content(self):
+        files=install.payload()
+        for number,kind in enumerate(('file','directory','dangling','extra')):
+            with self.subTest(kind=kind):
+                dest=self.root/f'linked-{number}'
+                install.install_tree(dest,files)
+                if kind=='file':
+                    outside=self.root/'original-skill.md'
+                    (dest/'SKILL.md').rename(outside)
+                    (dest/'SKILL.md').symlink_to(outside)
+                elif kind=='directory':
+                    outside=self.root/'original-scripts'
+                    (dest/'scripts').rename(outside)
+                    (dest/'scripts').symlink_to(outside,target_is_directory=True)
+                else:
+                    target=self.root/'absent' if kind=='dangling' else dest/'SKILL.md'
+                    (dest/'extra-link').symlink_to(target)
+                with self.assertRaisesRegex(ValueError,'symlinks or reparse points'):
+                    install.install_tree(dest,files)
+
+    @unittest.skipUnless(os.name=='nt','Windows junction behavior')
+    def test_internal_windows_junction_is_rejected(self):
+        dest=self.root/'junction-skill'
+        files=install.payload()
+        install.install_tree(dest,files)
+        outside=self.root/'junction-target'
+        (dest/'scripts').rename(outside)
+        result=subprocess.run(['cmd','/c','mklink','/J',str(dest/'scripts'),str(outside)],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        try:
+            with self.assertRaisesRegex(ValueError,'reparse points'):
+                install.install_tree(dest,files)
+        finally:
+            (dest/'scripts').rmdir()
+
+    @unittest.skipUnless(os.name=='posix','POSIX special file behavior')
+    def test_expected_file_replaced_with_fifo_is_rejected_without_reading(self):
+        dest=self.root/'special-file'
+        files=install.payload()
+        install.install_tree(dest,files)
+        (dest/'SKILL.md').unlink()
+        os.mkfifo(dest/'SKILL.md')
+        response=self.installer('--target','generic','--output',str(dest))
+        self.assertEqual(response.returncode,2,response.stdout)
+
+    def test_missing_file_and_file_directory_swaps_are_rejected(self):
+        files=install.payload()
+        for number,kind in enumerate(('missing','file-as-directory','directory-as-file')):
+            with self.subTest(kind=kind):
+                dest=self.root/f'malformed-{number}'
+                install.install_tree(dest,files)
+                if kind=='directory-as-file':
+                    shutil.rmtree(dest/'scripts')
+                    (dest/'scripts').write_bytes(b'not a directory')
+                else:
+                    (dest/'SKILL.md').unlink()
+                    if kind=='file-as-directory': (dest/'SKILL.md').mkdir()
+                with self.assertRaises(ValueError):
+                    install.install_tree(dest,files)
 
 
 if __name__=='__main__':

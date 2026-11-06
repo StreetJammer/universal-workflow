@@ -75,7 +75,7 @@ Codex:       $universal-workflow Add mobile controls while preserving keyboard c
 Claude Code: /universal-workflow Build and verify the buyer dashboard.
 ```
 
-For a user-wide install, replace `--project ... --wire` with `--user`. Global instruction files are not modified. Installation refuses to overwrite differing files; use a new directory or reconcile customized copies when upgrading.
+For a user-wide install, replace `--project ... --wire` with `--user`. Global instruction files are not modified. Existing destinations must match the complete payload: missing or changed files, extra entries (including Python caches), internal symlinks, and Windows reparse points are rejected. Nothing is automatically removed; use a new directory or explicitly reconcile the old copy before reinstalling.
 
 ### Claude Code plugin
 

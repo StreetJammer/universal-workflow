@@ -23,6 +23,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Missing working directory silently used process cwd | Require absolute existing cwd and session identity for records | Missing/relative/invalid cwd cannot write |
 | Instruction wiring changed modes and newline bytes | Preserve existing bytes and POSIX mode | CRLF prefix, permissions, unrelated settings, idempotence |
 | A later target conflict left an unexplained partial install | Preflight all destinations/blocks; report completed mutations on later filesystem errors | Second-target and managed-block conflicts leave first target untouched |
+| Existing destinations accepted injected import modules or linked directories alongside identical expected files | Validate the full entry set and types; reject extras and links without following them | Harmless injected-module reproduction, both-host preflight, plugin export, symlink/junction, bytecode/cache, FIFO, and missing/swapped-entry regressions |
 | Portable exports lacked licensing metadata | Include MIT terms and author/license/repository manifest fields | Generic and plugin exports contain matching license |
 
 ## Deliberate limits and next release gates
@@ -40,7 +41,7 @@ Scope: installation, context prompting, optional memory, review proposals, evalu
 | Non-Git discovery | Explicit host root respected; nearest store fallback without one | Initialize separate project stores or provide the host root |
 | Windows process trees | Immediate worker termination only | Native process-tree supervision and integration checks |
 | Store upgrades | First public schema 1; unpublished development stores rejected | Versioned migration when a released schema changes |
-| Public review | PR #1 open; first code-review finding reproduced and fixed | Completed reviews on the latest revision and fixes for reproducible findings |
+| Public review | PR #1 open; backup-permission and forged-destination findings reproduced and fixed | Completed reviews on the latest revision and fixes for reproducible findings |
 
 No open reproducible failure remains in the local release suite. Passing those tests does not establish complete coverage of the speech's architecture. The external checks above remain pending and are not represented as passing tests.
 
@@ -54,4 +55,4 @@ The [full speech audit](SPEECH_AUDIT.md) identified incomplete features that the
 - Parallel reviewer orchestration and cross-batch/fleet aggregation.
 - Authenticated organization/team/individual scopes and matching review-input permissions.
 
-The first three are the highest-value local feature backlog; the last two remain scale-dependent architectural work. These are not implemented by the current 53-test suite. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.
+The first three are the highest-value local feature backlog; the last two remain scale-dependent architectural work. These are not implemented by the current 60-test suite. Active scheduling and measured real-task benefits remain separate deployment/evaluation gaps.

@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path
 import shutil
+import stat
 import tempfile
 import sys
 
@@ -45,15 +46,43 @@ def check_tree(destination, files):
     resolved=dest.resolve()
     if resolved==SOURCE or SOURCE in resolved.parents:
         raise ValueError('Destination must be outside this skill source')
-    if any(p.is_symlink() for p in [dest,*dest.parents]):
-        raise ValueError('Destination path must not traverse symlinks')
+    for path in [dest,*dest.parents]:
+        try:
+            info=path.lstat()
+        except FileNotFoundError:
+            continue
+        reject_link(path,info)
     if dest.exists():
-        for rel,content in files.items():
-            existing=dest/rel
-            if not existing.is_file() or existing.is_symlink() or existing.read_bytes()!=content:
-                raise ValueError('Destination differs; choose a new path to preserve existing work: '+str(dest))
+        if not dest.is_dir():
+            raise ValueError('Destination is not a directory: '+str(dest))
+        directories={parent.as_posix() for rel in files for parent in Path(rel).parents if parent!=Path('.')}
+        seen=set()
+        pending=[dest]
+        while pending:
+            for existing in pending.pop().iterdir():
+                rel=existing.relative_to(dest).as_posix()
+                info=existing.lstat()
+                # Check without following links before reading or descending.
+                reject_link(existing,info)
+                if stat.S_ISDIR(info.st_mode) and rel in directories:
+                    pending.append(existing)
+                elif stat.S_ISREG(info.st_mode) and rel in files:
+                    if existing.read_bytes()!=files[rel]:
+                        raise ValueError('Destination differs; choose a new path to preserve existing work: '+str(existing))
+                    seen.add(rel)
+                else:
+                    raise ValueError('Unexpected entry in destination; choose a new path to preserve existing work: '+str(existing))
+        if seen!=set(files):
+            raise ValueError('Destination is missing expected files; choose a new path to preserve existing work: '+str(dest))
         return dest,False
     return dest,True
+
+
+def reject_link(path,info):
+    # Windows junctions and other reparse points need not be S_ISLNK.
+    reparse=getattr(info,'st_file_attributes',0) & getattr(stat,'FILE_ATTRIBUTE_REPARSE_POINT',0x400)
+    if stat.S_ISLNK(info.st_mode) or reparse:
+        raise ValueError('Destination must not contain or traverse symlinks or reparse points: '+str(path))
 
 
 def install_tree(destination, files):
