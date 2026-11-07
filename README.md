@@ -105,6 +105,21 @@ The plugin includes lightweight session, prompt, failure, and stop hooks. They n
 
 This local loading command does not publish to a marketplace or register a permanent global plugin. See [host adapters](skills/universal-workflow/references/adapters.md) for exports and deployment details.
 
+### Claude Chat/Cowork upload
+
+Build a portable upload ZIP using Python 3.10+ (use `py -3` on Windows):
+
+```bash
+python3 skills/universal-workflow/scripts/package_claude.py \
+  --target skill --output /absolute/new/universal-workflow-skill.zip
+```
+
+Upload this file through **Customize > Skills > Upload a skill**. For the Plugins upload screen, build a separate archive with `--target plugin`; that archive includes the plugin manifest, commands, and hooks. Choose one installation format to avoid duplicate discovery.
+
+The exporter writes ZIP-standard `/` entry paths on every operating system, preserves the skill instruction body, and uses a Claude-specific description under the documented 200-character upload limit. Existing output files are never overwritten. The source skill and installed copies are unchanged. Use this exporter instead of relying on a Windows archiver's path conventions. See [Claude's packaging guide](https://support.claude.com/en/articles/12512198-how-to-create-custom-skills).
+
+Offline archive validation does not prove acceptance by Claude's uploader or activation of hooks. Uploaded Chat/Cowork packages are separate from local skill installs and project memory; an upload does not establish a shared local store or activate an unattended scheduler.
+
 ### Other hosts
 
 ```bash
