@@ -146,14 +146,18 @@ def evaluate(pr, require_checks=(), require_security=False):
         author = comment.get("author") or {}
         if author.get("__typename") != "Bot" or author.get("login") not in BOT_LOGINS:
             continue
-        match = MARKER.search(comment["body"])
+        body = comment["body"]
+        if "codex-review-state" not in body and "codex-pull-request-review-summary" not in body:
+            continue
+        # Select the newest summary before parsing its supported format. Unknown
+        # versions or broken envelopes must never fall back to older clean evidence.
+        match = MARKER.search(body)
         if match:
             try:
                 summary = json.loads(match.group(1))
             except ValueError:
                 pass
-            # The newest summary is authoritative, even if malformed or stale.
-            break
+        break
     for kind in (["code_review", "security_review"] if require_security else ["code_review"]):
         review = summary.get(kind) if isinstance(summary, dict) else None
         if not isinstance(review, dict) or review.get("commit_sha") != head:

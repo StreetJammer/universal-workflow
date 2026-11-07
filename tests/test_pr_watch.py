@@ -61,6 +61,17 @@ class ReadinessTests(unittest.TestCase):
                 self.assertEqual(self.result(), 'pending')
                 self.pr['comments']['nodes'].pop()
 
+    def test_unsupported_or_incomplete_summary_never_reuses_old_clean(self):
+        clean = self.pr['comments']['nodes'][0]['body']
+        for body in [clean.replace('codex-review-state:v1', 'codex-review-state:v2'),
+                     clean.removesuffix(' -->'),
+                     '<!-- codex-pull-request-review-summary --> Review running']:
+            with self.subTest(body=body):
+                self.pr['comments']['nodes'].append(dict(databaseId=2, updatedAt='2026-11-07T12:01:00Z',
+                    author=dict(login='chatgpt-codex-connector', __typename='Bot'), body=body))
+                self.assertEqual(self.result(), 'pending')
+                self.pr['comments']['nodes'].pop()
+
     def test_findings_block(self):
         c = self.pr['comments']['nodes'][0]
         c['body'] = c['body'].replace('"has_any_findings": false', '"has_any_findings": true')
