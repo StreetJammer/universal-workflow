@@ -40,6 +40,12 @@ This is a **preview implementation**. It provides a workflow and local tooling; 
 
 **Progress, 6 November 2026:** the foundation and all five feature follow-ups are merged. Their final feature revision contained 184 tests and passed all six hosted CI jobs and code/security review. The current suite adds three outcome-closeout tests; see [validation scope](docs/VALIDATION.md) and [completed work and remaining deployment checks](docs/GAP_ANALYSIS.md#progress--6-november-2026).
 
+## Pull request watcher
+
+Watch current and future open PRs for CI and Codex review readiness with the
+[read-only PR watcher](docs/PR_WATCHER.md). It supports one PR or repository-wide
+watching, detects new commits, and reports status changes without merging.
+
 ## Requirements
 
 | Component | Requirement |
